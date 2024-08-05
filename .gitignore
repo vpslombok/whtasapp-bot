@@ -1,0 +1,2 @@
+# Mengecualikan direktori node_modules jika menggunakan Node.js
+node_modules/
