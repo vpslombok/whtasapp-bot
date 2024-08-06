@@ -205,7 +205,7 @@ async function connectToWhatsApp() {
         const pesanMasuk = pesan ? pesan.toLowerCase() : ""; // Mengubah pesan menjadi huruf kecil
         const tanggalSekarang = new Date().toLocaleDateString();
         const waktuSekarang = new Date().toLocaleTimeString();
-
+        
         console.log(`Pesan Masuk dari ${namaPengirim}: ${pesan}`); // Log pesan masuk untuk debugging
 
         // Menandai pesan sebagai telah dibaca
