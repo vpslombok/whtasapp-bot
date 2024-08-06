@@ -22,7 +22,7 @@ const app = express();
 const server = http.createServer(app);
 const io = require("socket.io")(server);
 
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 8001;
 const session = "./session";
 const store = makeInMemoryStore({
   logger: pino().child({ level: "silent", stream: "store" }),
