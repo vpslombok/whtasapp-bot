@@ -1,5 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/xayjyaqu/public_html/
+    - export DEPLOYPATH=/home/xayjyaqu/wa.bael.my.id/
     - cp -r * $DEPLOYPATH
