@@ -17,12 +17,13 @@ const fileUpload = require("express-fileupload");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const qrcode = require("qrcode");
+const moment = require("moment-timezone");
 
 const app = express();
 const server = http.createServer(app);
 const io = require("socket.io")(server);
 
-const port = process.env.PORT || 8001;
+const port = process.env.PORT || 3100;
 const session = "./session";
 const store = makeInMemoryStore({
   logger: pino().child({ level: "silent", stream: "store" }),
@@ -45,7 +46,7 @@ app.get("/", (req, res) => {
 });
 
 function getGreeting() {
-  const currentHour = new Date().getHours();
+  const currentHour = moment().tz("Asia/Jakarta").hour();
   if (currentHour >= 4 && currentHour < 12) {
     return "Selamat Pagi Kak";
   } else if (currentHour >= 12 && currentHour < 18) {
@@ -203,8 +204,8 @@ async function connectToWhatsApp() {
         const noWa = message.key.remoteJid;
         const namaPengirim = message.pushName;
         const pesanMasuk = pesan ? pesan.toLowerCase() : ""; // Mengubah pesan menjadi huruf kecil
-        const tanggalSekarang = new Date().toLocaleDateString();
-        const waktuSekarang = new Date().toLocaleTimeString();
+        const waktuSekarang = moment().tz("Asia/Jakarta").format("HH:mm:ss");
+        const tanggalSekarang = moment().tz("Asia/Jakarta").format("DD-MM-YYYY");
         
         console.log(`Pesan Masuk dari ${namaPengirim}: ${pesan}`); // Log pesan masuk untuk debugging
 
