@@ -18,8 +18,11 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const qrcode = require("qrcode");
 const moment = require("moment-timezone");
+const axios = require("axios");
+const db = require('./db'); // Import koneksi database
 
 const app = express();
+app.use(bodyParser.json());
 const server = http.createServer(app);
 const io = require("socket.io")(server);
 
@@ -169,7 +172,35 @@ async function connectToWhatsApp() {
     }
   });
 
+  async function sendToWebhook(data) {
+    try {
+      const webhookUrl = await getWebhookUrl(); // Ambil URL webhook dari server
+      const response = await axios.post(webhookUrl, data);
+      console.log('Webhook response:', response.data);
+    } catch (error) {
+      console.error('Error sending to webhook:', error);
+    }
+  }
+  
+
+  async function getWebhookUrl() {
+    try {
+      const response = await fetch(`http://localhost:${port}/webhook-url`);
+      const result = await response.json();
+      if (result.url) {
+        return result.url;
+      } else {
+        throw new Error('No webhook URL found');
+      }
+    } catch (error) {
+      console.error('Error fetching webhook URL:', error);
+      throw error;
+    }
+  }
+
+
   sock.ev.on("creds.update", saveCreds);
+  // Menangani pesan masuk dan mengirimkan data ke webhook
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (type === "notify") {
       const message = messages[0];
@@ -205,8 +236,10 @@ async function connectToWhatsApp() {
         const namaPengirim = message.pushName;
         const pesanMasuk = pesan ? pesan.toLowerCase() : ""; // Mengubah pesan menjadi huruf kecil
         const waktuSekarang = moment().tz("Asia/Jakarta").format("HH:mm:ss");
-        const tanggalSekarang = moment().tz("Asia/Jakarta").format("DD-MM-YYYY");
-        
+        const tanggalSekarang = moment()
+          .tz("Asia/Jakarta")
+          .format("DD-MM-YYYY");
+
         console.log(`Pesan Masuk dari ${namaPengirim}: ${pesan}`); // Log pesan masuk untuk debugging
 
         // Menandai pesan sebagai telah dibaca
@@ -236,6 +269,17 @@ async function connectToWhatsApp() {
         }
 
         await sock.sendMessage(noWa, { text: balasan }); // Mengirim balasan
+
+        // Data yang dikirim ke webhook
+        const dataToSend = {
+          number: noWa,
+          name: namaPengirim,
+          message: pesan,
+          timestamp: moment().tz("Asia/Jakarta").format(),
+        };
+
+        // Kirim data ke webhook
+        await sendToWebhook(dataToSend);
       }
     }
   });
@@ -362,6 +406,33 @@ app.post("/send-message", async (req, res) => {
   }
 });
 
+// Endpoint untuk mendapatkan URL webhook
+app.get('/webhook-url', (req, res) => {
+  db.query('SELECT url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1', (err, results) => {
+    if (err) {
+      console.error('Error retrieving webhook URL:', err);
+      return res.status(500).json({ status: false, message: 'Error retrieving webhook URL' });
+    }
+    res.json({ url: results[0] ? results[0].url : null });
+  });
+});
+
+// Endpoint untuk memperbarui URL webhook
+app.post('/update-webhook-url', (req, res) => {
+  const { url } = req.body;
+  if (url) {
+    db.query('INSERT INTO webhook_urls (url) VALUES (?)', [url], (err) => {
+      if (err) {
+        console.error('Error updating webhook URL:', err);
+        return res.status(500).json({ status: false, message: 'Error updating webhook URL' });
+      }
+      res.status(200).json({ status: true, message: 'Webhook URL updated successfully.' });
+    });
+  } else {
+    res.status(400).json({ status: false, message: 'Invalid URL.' });
+  }
+});
+
 app.post("/logout", async (req, res) => {
   try {
     if (isConnected()) {
@@ -390,6 +461,37 @@ app.post("/logout", async (req, res) => {
 
 app.get("/get-user", async (req, res) => {
   res.status(200).json({ status: true, nomor: info_device, nama: wa_nama });
+});
+
+// Endpoint untuk webhook
+app.post('/webhook', (req, res) => {
+  db.query('SELECT url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1', (err, results) => {
+    if (err) {
+      console.error('Error retrieving webhook URL:', err);
+      return res.status(500).send('Error retrieving webhook URL');
+    }
+    const webhookUrl = results[0] ? results[0].url : null;
+    if (webhookUrl) {
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(req.body),
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Data sent to webhook:', data);
+          res.status(200).send('Data sent to webhook');
+        })
+        .catch(error => {
+          console.error('Error sending data to webhook:', error);
+          res.status(500).send('Error sending data to webhook');
+        });
+    } else {
+      res.status(400).send('Webhook URL is not set');
+    }
+  });
 });
 
 connectToWhatsApp().catch((err) => console.log("unexpected error: " + err));
