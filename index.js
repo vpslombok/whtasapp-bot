@@ -410,8 +410,8 @@ app.post("/send-message", async (req, res) => {
 app.get('/webhook-url', (req, res) => {
   db.query('SELECT url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1', (err, results) => {
     if (err) {
-      console.error('Error retrieving webhook URL:', err);
-      return res.status(500).json({ status: false, message: 'Error retrieving webhook URL' });
+      console.error('Terjadi kesalahan saat mengambil URL webhook:', err);
+      return res.status(500).json({ status: false, message: 'Terjadi kesalahan saat mengambil URL webhook' });
     }
     res.json({ url: results[0] ? results[0].url : null });
   });
@@ -423,13 +423,13 @@ app.post('/update-webhook-url', (req, res) => {
   if (url) {
     db.query('INSERT INTO webhook_urls (url) VALUES (?)', [url], (err) => {
       if (err) {
-        console.error('Error updating webhook URL:', err);
-        return res.status(500).json({ status: false, message: 'Error updating webhook URL' });
+        console.error('Terjadi kesalahan saat memperbarui URL webhook:', err);
+        return res.status(500).json({ status: false, message: 'Terjadi kesalahan saat memperbarui URL webhook' });
       }
       res.status(200).json({ status: true, message: 'Webhook URL updated successfully.' });
     });
   } else {
-    res.status(400).json({ status: false, message: 'Invalid URL.' });
+    res.status(400).json({ status: false, message: 'URL tidak valid.' });
   }
 });
 
@@ -467,8 +467,8 @@ app.get("/get-user", async (req, res) => {
 app.post('/webhook', (req, res) => {
   db.query('SELECT url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1', (err, results) => {
     if (err) {
-      console.error('Error retrieving webhook URL:', err);
-      return res.status(500).send('Error retrieving webhook URL');
+      console.error('Terjadi kesalahan saat mengambil URL webhook:', err);
+      return res.status(500).send('Terjadi kesalahan saat mengambil URL webhook');
     }
     const webhookUrl = results[0] ? results[0].url : null;
     if (webhookUrl) {
@@ -485,8 +485,8 @@ app.post('/webhook', (req, res) => {
           res.status(200).send('Data sent to webhook');
         })
         .catch(error => {
-          console.error('Error sending data to webhook:', error);
-          res.status(500).send('Error sending data to webhook');
+          console.error('Terjadi kesalahan saat mengirim data ke webhook:', error);
+          res.status(500).send('Terjadi kesalahan saat mengirim data ke webhook');
         });
     } else {
       res.status(400).send('Webhook URL is not set');
