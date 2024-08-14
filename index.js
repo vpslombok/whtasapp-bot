@@ -26,6 +26,7 @@ app.use(bodyParser.json()); // Menggunakan library body-parser untuk mengatur pe
 const server = http.createServer(app); // Membuat server
 const io = require("socket.io")(server); // Menggunakan library socket.io untuk mengatur socket
 
+
 const port = process.env.PORT || 3100;
 const session = "./session"; // Menggunakan library session untuk mengatur session
 const store = makeInMemoryStore({
@@ -51,6 +52,23 @@ app.get("/scan", (req, res) => {
 app.get("/", (req, res) => {
   res.sendFile("./client/index.html", { root: __dirname }); // Menggunakan library express untuk mengatur server
 });
+
+// Endpoint untuk profile
+app.get("/profile", (req, res) => {
+  res.sendFile("./client/profile.html", { root: __dirname }); // Menggunakan library express untuk mengatur server
+});
+
+// endpoint untuk setting
+app.get("/setting", (req, res) => {
+  res.sendFile("./client/setting.html", { root: __dirname }); // Menggunakan library express untuk mengatur server
+});
+
+// endpoint untuk kirim pesan
+app.get("/kirim_pesan", (req, res) => {
+  res.sendFile("./client/kirim_pesan.html", { root: __dirname }); // Menggunakan library express untuk mengatur server
+});
+
+
 
 // Fungsi untuk mendapatkan pesan selamat
 function getGreeting() {
@@ -91,6 +109,7 @@ async function connectToWhatsApp() {
   });
   store.bind(sock.ev);
   sock.multi = true;
+
 
   // Event untuk mengupdate koneksi
   sock.ev.on("connection.update", async (update) => {
@@ -153,9 +172,9 @@ async function connectToWhatsApp() {
     } else if (connection === "open") {
       info_device = sock.user.id.split(":")[0].replace("@s.whatsapp.net", "").replace("62", "0");
       console.log(
-        "Whatsapp terhubung ke " +
+         +
           info_device +
-          " dengan nama " +
+          " / " +
           sock.user.name
       );
       // Ambil URL foto profil
@@ -341,6 +360,32 @@ const updateQR = (data) => {
   }
 };
 
+// Endpoint untuk mendapatkan QR code
+app.get('/api/qr-code', (req, res) => {
+  if (isConnected()) {
+    res.status(200).json({
+      message: "User sudah terhubung",
+      user: info_device,
+      nama: wa_nama,
+      profilePicUrl: info_device_profilePicUrl,
+      // qrCodeUrl: url
+    });
+  } else {
+    if (qr) {
+      qrcode.toDataURL(qr, (err, url) => {
+        if (err) {
+          console.error("Error generating QR code:", err);
+          res.status(500).json({ error: "Gagal menghasilkan QR code" });
+        } else {
+          res.status(200).json({ qrCodeUrl: url });  // Pastikan field name cocok dengan klien
+        }
+      });
+    } else {
+      res.status(404).json({ error: "QR code tidak tersedia" });
+    }
+  }
+});
+
 // Endpoint untuk mengirim pesan
 app.post("/send-message", async (req, res) => {
   const { message: pesankirim, number } = req.body;
@@ -448,9 +493,10 @@ app.post("/logout", async (req, res) => {
   }
 });
 
+
 // Endpoint untuk mendapatkan informasi user
 app.get("/get-user", async (req, res) => {
-  res.status(200).json({ status: true, nomor: info_device, nama: wa_nama, database: db.state });
+  res.status(200).json({ status: true, nomor: info_device, nama: wa_nama, profilePicUrl: info_device_profilePicUrl });
 });
 
 
@@ -465,16 +511,23 @@ app.get('/webhook-url', (req, res) => {
   });
 });
 
+
 // Endpoint untuk memperbarui URL webhook
 app.post('/update-webhook-url', (req, res) => {
   const { url } = req.body;
   if (url) {
-    db.query('INSERT INTO webhook_urls (url) VALUES (?)', [url], (err) => {
+    db.query('INSERT INTO webhook_urls (url) VALUES (?) ON DUPLICATE KEY UPDATE url=VALUES(url)', [url], (err) => {
       if (err) {
         console.error('Terjadi kesalahan saat memperbarui URL webhook:', err);
         return res.status(500).json({ status: false, message: 'Terjadi kesalahan saat memperbarui URL webhook' });
       }
-      res.status(200).json({ status: true, message: 'Webhook URL updated successfully.' });
+      db.query('DELETE FROM webhook_urls WHERE url != ?', [url], (errDelete) => {
+        if (errDelete) {
+          console.error('Terjadi kesalahan saat menghapus URL webhook lama:', errDelete);
+          return res.status(500).json({ status: false, message: 'Terjadi kesalahan saat menghapus URL webhook lama' });
+        }
+        res.status(200).json({ status: true, message: 'Webhook URL updated successfully.' });
+      });
     });
   } else {
     res.status(400).json({ status: false, message: 'URL tidak valid.' });
@@ -512,6 +565,38 @@ app.post('/webhook', (req, res) => {
     }
   });
 });
+
+// Endpoint untuk mendapatkan informasi koneksi database
+app.get('/db-info', (req, res) => {
+  try {
+    // Cek koneksi database
+    db.connection.query('SELECT 1', (err) => {
+      if (err) {
+        // Jika terjadi kesalahan, kirimkan status gagal
+        res.json({
+          status: 'failure',
+          message: 'Error connecting to MySQL database: ' + err.message
+        });
+      } else {
+        // Jika koneksi berhasil, kirimkan status sukses
+        const connectionInfo = db.getConnectionInfo();
+        res.json({
+          status: 'success',
+          message: 'Connected to MySQL database.',
+          connectionInfo: connectionInfo
+        });
+      }
+    });
+  } catch (error) {
+    // Tangani kesalahan lain
+    res.json({
+      status: 'failure',
+      message: 'Unexpected error: ' + error.message
+    });
+  }
+});
+
+
 
 // Memulai server
 connectToWhatsApp().catch((err) => console.log("unexpected error: " + err));
