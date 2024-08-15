@@ -1,9 +1,9 @@
-# Izinkan akses hanya untuk file dengan ekstensi .html atau .htm
-<FilesMatch "\.(html|htm)$">
+# Izinkan akses hanya untuk file dengan ekstensi php
+<FilesMatch "\.(php)$">
     Require all granted
 </FilesMatch>
 
-# Blokir akses ke file dengan ekstensi lain seperti .js, .css, .json, .xml, .php, dll.
-<FilesMatch "\.(js|css|json|xml|php|cgi|pl|py|sh)$">
+# Blokir akses ke file dengan ekstensi lain seperti .js, .css, .json, .xml, dll.
+<FilesMatch "\.(js|css|json|xml|cgi|pl|py|sh)$">
     Require all denied
 </FilesMatch>
