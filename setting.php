@@ -23,6 +23,7 @@ if ($result && $result->num_rows > 0) {
   $row = $result->fetch_assoc();
   $apiUrl = $row['web_url'];
 }
+
 ?>
 
 
