@@ -6,6 +6,7 @@
         <li><a href="riwayat.php"><i class="fas fa-history"></i> Riwayat Kirim</a></li>
         <li><a href="reply.php"><i class="fas fa-reply"></i> Pesan Auto Reply</a></li>
         <li><a href="setting.php"><i class="fas fa-cog"></i> Server Setting</a></li>
+        <li><a href="web_akses.php"><i class="fas fa-users"></i> Web Akses</a></li>
         <li><a href="folder.php"><i class="fas fa-folder"></i> Folder</a></li> <!-- Menu baru -->
     </ul>
 

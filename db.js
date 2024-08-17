@@ -6,9 +6,9 @@ function handleDisconnect() {
   connection = mysql.createConnection({
     //conek database js
     host: '127.0.0.1', // Ganti dengan IP server MySQL
-    user: 'xayjyaqu_admin', // Ganti dengan username MySQL Anda
-    password: 'y_=jmn4~yG^t', // Ganti dengan password MySQL Anda
-    database: 'xayjyaqu_bot_wa'
+    user: 'root', // Ganti dengan username MySQL Anda
+    password: '123', // Ganti dengan password MySQL Anda
+    database: 'webhookdb'
   });
 
   // Sambungkan ke database

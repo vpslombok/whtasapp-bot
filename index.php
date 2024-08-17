@@ -9,14 +9,29 @@ if ($result && $result->num_rows > 0) {
   $row = $result->fetch_assoc();
   $apiUrl = $row['web_url'];
 
-  // Simpan IP dan lokasi user yang mengakses ke database jika belum ada
+  // Dapatkan IP user
   $userIP = $_SERVER['REMOTE_ADDR'];
-  $location = json_decode(file_get_contents("http://ipinfo.io/" . $userIP . "/json"), true);
-  $query = "SELECT * FROM user_access WHERE ip = '$userIP' AND location = '" . json_encode($location) . "'";
-  $result = $conn->query($query);
-  if (!$result || $result->num_rows == 0) {
-    $query = "INSERT INTO user_access (ip, location) VALUES ('$userIP', '" . json_encode($location) . "')";
-    $conn->query($query);
+
+  // Dapatkan informasi lokasi user berdasarkan IP
+  $locationJson = file_get_contents("http://ipinfo.io/{$userIP}/json");
+  $locationData = json_decode($locationJson, true);
+
+  // Ekstrak latitude dan longitude dari data lokasi
+  if (isset($locationData['loc'])) {
+    list($latitude, $longitude) = explode(',', $locationData['loc']);
+
+    // Contoh penggunaan latitude dan longitude
+    echo "Latitude: $latitude<br>";
+    echo "Longitude: $longitude<br>";
+
+    // Simpan ke database jika perlu
+    $stmt = $conn->prepare("INSERT INTO user_access (ip, latitude, longitude, location) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("ssss", $userIP, $latitude, $longitude, $locationJson);
+    $stmt->execute();
+
+    $stmt->close();
+  } else {
+    echo "Lokasi tidak ditemukan.";
   }
 }
 ?>
