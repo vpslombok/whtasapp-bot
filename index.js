@@ -18,7 +18,7 @@ const cors = require("cors"); // Menggunakan library cors untuk mengatur permint
 const bodyParser = require("body-parser"); // Menggunakan library body-parser untuk mengatur permintaan
 const qrcode = require("qrcode"); // Menggunakan library qrcode untuk mengatur QR
 const moment = require("moment-timezone"); // Menggunakan library moment-timezone untuk mengatur waktu
-const axios = require("axios"); // Menggunakan library axios untuk mengirim permintaan HTTP
+const axios = require("axios"); // Menggunakan library axios untuk mengirim permintaan
 const db = require("./db"); // Import koneksi database
 
 const app = express();
@@ -33,7 +33,15 @@ const store = makeInMemoryStore({
 }); // Menggunakan library pino untuk logging
 
 // Variabel untuk menyimpan data
-let sock, qr, soket, info_device, info_device_profilePicUrl, wa_nama;
+let sock,
+  qr,
+  soket,
+  info_device,
+  info_device_profilePicUrl,
+  wa_nama,
+  weburl,
+  pesan_masuk,
+  pesan_keluar;
 
 // Middleware untuk mengatur permintaan
 app.use(fileUpload({ createParentPath: true })); // Menggunakan library fileUpload untuk mengatur file
@@ -42,46 +50,22 @@ app.use(bodyParser.json()); // Menggunakan library body-parser untuk mengatur pe
 app.use(bodyParser.urlencoded({ extended: true })); // Menggunakan library body-parser untuk mengatur permintaan
 app.use("/assets", express.static(__dirname + "/client/assets")); // Menggunakan library express untuk mengatur server
 
-// // Endpoint untuk halaman scan
-// app.get("/scan", (req, res) => {
-//   res.sendFile("./client/server.html", { root: __dirname }); // Menggunakan library express untuk mengatur server
-// });
-
-// // Endpoint untuk halaman utama
-// app.get("/", (req, res) => {
-//   res.sendFile("./client/index.html", { root: __dirname }); // Menggunakan library express untuk mengatur server
-// });
-
-// // Endpoint untuk profile
-// app.get("/profile", (req, res) => {
-//   res.sendFile("./client/profile.html", { root: __dirname }); // Menggunakan library express untuk mengatur server
-// });
-
-// // endpoint untuk setting
-// app.get("/setting", (req, res) => {
-//   res.sendFile("./client/setting.html", { root: __dirname }); // Menggunakan library express untuk mengatur server
-// });
-
-// // endpoint untuk kirim pesan
-// app.get("/kirim_pesan", (req, res) => {
-//   res.sendFile("./client/kirim_pesan.html", { root: __dirname }); // Menggunakan library express untuk mengatur server
-// });
-
 // Fungsi untuk mendapatkan pesan selamat yang lebih realistis
 function getGreeting() {
   const currentHour = moment().tz("Asia/Singapore").hour();
   const currentDay = moment().tz("Asia/Singapore").format("dddd");
 
   let greeting;
-  if (currentHour >= 1 && currentHour < 12) {
+  if (currentHour >= 0 && currentHour < 12) {
     greeting = "Selamat Pagi";
   } else if (currentHour >= 12 && currentHour < 15) {
     greeting = "Selamat Siang";
   } else if (currentHour >= 15 && currentHour < 18) {
     greeting = "Selamat Sore";
-  } else if (currentHour >= 18 && currentHour < 23) {
+  } else if (currentHour >= 18 && currentHour < 24) {
     greeting = "Selamat Malam";
   }
+  return greeting;
 }
 
 // Fungsi untuk mendapatkan foto profil
@@ -115,54 +99,55 @@ async function connectToWhatsApp() {
     const { connection, lastDisconnect } = update;
 
     if (connection === "close") {
-      const reason = lastDisconnect.error?.output?.statusCode || "Unknown";
-      console.log(`Connection closed with reason: ${reason}`);
+      const reason =
+        lastDisconnect.error?.output?.statusCode || "Tidak Diketahui";
+      console.log(`Koneksi ditutup dengan alasan: ${reason}`);
 
       switch (reason) {
         case DisconnectReason.badSession:
           console.log(
-            `Bad Session File, Please Delete ${session} and Scan Again`
+            `File Sesi Buruk, Silakan Hapus ${session} dan Scan Lagi`
           );
           await sock.logout();
           break;
         case DisconnectReason.connectionClosed:
-          console.log("Connection closed, reconnecting...");
+          console.log("Koneksi ditutup, menghubungkan kembali...");
           await connectToWhatsApp();
           break;
         case DisconnectReason.connectionLost:
-          console.log("Connection Lost from Server, reconnecting...");
+          console.log("Koneksi Hilang dari Server, menghubungkan kembali...");
           await connectToWhatsApp();
           break;
         case DisconnectReason.connectionReplaced:
           console.log(
-            "Connection Replaced, Another New Session Opened, Please Close Current Session First"
+            "Koneksi Digantikan, Sesi Baru Lain Dibuka, Silakan Tutup Sesi Saat Ini Terlebih Dahulu"
           );
           await sock.logout();
           break;
         case DisconnectReason.loggedOut:
           console.log(
-            `Device Logged Out, Please Delete ${session} and Scan Again.`
+            `Perangkat Keluar, Silakan Hapus ${session} dan Scan Lagi.`
           );
           if (fs.existsSync(session)) {
             fs.rmSync(session, { recursive: true });
-            console.log(`${session} has been deleted.`);
+            console.log(`${session} telah dihapus.`);
           }
           await sock.logout();
           break;
         case DisconnectReason.restartRequired:
-          console.log("Restart Required, Restarting...");
+          console.log("Restart Diperlukan, Mengulang...");
           await connectToWhatsApp();
           break;
         case DisconnectReason.timedOut:
-          console.log("Connection TimedOut, Reconnecting...");
+          console.log("Koneksi Kedaluwarsa, Menghubungkan kembali...");
           await connectToWhatsApp();
           break;
         default:
           console.log(
-            `Unknown DisconnectReason: ${reason}|${lastDisconnect.error}`
+            `Alasan DisconnectReason Tidak Diketahui: ${reason}|${lastDisconnect.error}`
           );
           sock.end(
-            `Unknown DisconnectReason: ${reason}|${lastDisconnect.error}`
+            `Alasan DisconnectReason Tidak Diketahui: ${reason}|${lastDisconnect.error}`
           );
           await connectToWhatsApp();
           break;
@@ -198,16 +183,33 @@ async function connectToWhatsApp() {
     try {
       const webhookUrl = await getWebhookUrl(); // Ambil URL webhook dari server
       const response = await axios.post(webhookUrl, data);
-      console.log("Webhook response:", response.data);
+      // console.log("Webhook response:", response.data);
     } catch (error) {
       console.error("Error sending to webhook:", error);
     }
   }
 
+  // Menggunakan koneksi database untuk mengambil URL webhook terbaru
+  db.query(
+    "SELECT web_url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1",
+    (err, results) => {
+      if (err) {
+        console.error("Error executing query:", err);
+      } else {
+        if (results.length > 0) {
+          weburl = results[0].web_url;
+          soket?.emit("weburl", weburl);
+        } else {
+          console.error("No webhook URL found in database");
+        }
+      }
+    }
+  );
+
   // Fungsi untuk mendapatkan URL webhook
   async function getWebhookUrl() {
     try {
-      const response = await fetch(`http://localhost:${port}/webhook-url`);
+      const response = await fetch(`${weburl}/webhook-url`);
       const result = await response.json();
       if (result.url) {
         return result.url;
@@ -258,47 +260,77 @@ async function connectToWhatsApp() {
         const noWa = message.key.remoteJid;
         const namaPengirim = message.pushName;
         const pesanMasuk = pesan ? pesan.toLowerCase() : ""; // Mengubah pesan menjadi huruf kecil
-        const waktuSekarang = moment().tz("Asia/Jakarta").format("HH:mm:ss");
+        const waktuSekarang = moment().tz("Asia/Singapore").format("HH:mm:ss");
         const tanggalSekarang = moment()
-          .tz("Asia/Jakarta")
+          .tz("Asia/Singapore")
           .format("DD-MM-YYYY");
 
         console.log(`Pesan Masuk dari ${namaPengirim}: ${pesan}`); // Log pesan masuk untuk debugging
 
-        // Menandai pesan sebagai telah dibaca
         await sock.readMessages([message.key]);
 
         let balasan = "";
         const greeting = getGreeting();
 
-        // Cek jika pesan berasal dari grup
         if (noWa.endsWith("@g.us")) {
-          // Pesan dari grup
           console.log(`Pesan dari grup ${noWa}: ${pesan}`);
           balasan = `${greeting} *${namaPengirim}*, Mohon Maaf, Fitur Bot Belum Tersedia di Grup`;
         } else {
-          // Pesan dari individu
-          if (pesanMasuk.includes("jam")) {
-            balasan = `Jam sekarang ${waktuSekarang} dan tanggal sekarang ${tanggalSekarang}`;
-          } else if (pesanMasuk.includes("info")) {
-            balasan = `Berikut informasi yang dapat dikirim:\n- *jam*\n- *tanggal*\n- *halo*`;
-          } else if (pesanMasuk.includes("tanggal")) {
-            balasan = `Tanggal sekarang ${tanggalSekarang}`;
-          } else if (pesanMasuk.includes("halo")) {
-            balasan = `Halo *${namaPengirim}*, Selamat Datang di WhatsApp Bot Pintar`;
-          } else {
-            balasan = `${greeting} *${namaPengirim}*, di WhatsApp Bot Pintar ketik *INFO* untuk Menggunakan Fitur Bot`;
-          }
-        }
+          // Deklarasi variabel 'ditemukan' di luar loop
+          let ditemukan = false;
 
-        await sock.sendMessage(noWa, { text: balasan }); // Mengirim balasan
+          // Ambil data dari database
+          db.query("SELECT * FROM reply", (err, results) => {
+            if (err) {
+              console.error("Error executing query:", err);
+              return;
+            }
+
+            // Cek setiap pesan dalam database
+            results.forEach((result) => {
+              if (pesanMasuk.includes(result.pesan_masuk)) {
+                // Gantikan placeholder dalam balasan
+                balasan = result.pesan_keluar
+                  .replace("${namaPengirim}", namaPengirim)
+                  .replace("${noWa}", noWa)
+                  .replace("${tanggalSekarang}", tanggalSekarang)
+                  .replace("${waktuSekarang}", waktuSekarang);
+                ditemukan = true;
+              }
+            });
+
+            // Jika pesan tidak ditemukan dalam database
+            if (!ditemukan) {
+              balasan = `${greeting} *${namaPengirim}*, di WhatsApp Bot Pintar ketik *INFO* untuk Menggunakan Fitur Bot`;
+            }
+            console.log("balasan: " + balasan);
+
+            // Kirim balasan setelah loop selesai
+            sock.sendMessage(noWa, { text: balasan });
+
+            // Simpan balasan ke database send_messages
+            db.query(
+              `INSERT INTO send_messages (number, message) VALUES (?, ?)`,
+              [noWa, balasan],
+              (err, results) => {
+                if (err) {
+                  console.error("Error saving message to send_messages:", err);
+                } else {
+                  console.log(
+                    "Balasan berhasil disimpan ke database send_messages."
+                  );
+                }
+              }
+            );
+          });
+        }
 
         // Data yang dikirim ke webhook
         const dataToSend = {
           number: noWa,
           name: namaPengirim,
           message: pesan,
-          timestamp: moment().tz("Asia/Jakarta").format(),
+          timestamp: moment().tz("Asia/Singapore").format(),
         };
 
         // Kirim data ke webhook
@@ -400,6 +432,18 @@ app.post("/send-message", async (req, res) => {
         await sock.sendMessage(exists.jid || exists[0].jid, {
           text: pesankirim,
         });
+        // Simpan pesan ke database jika berhasil terkirim
+        db.query(
+          "INSERT INTO sent_messages (number, message, tanggal) VALUES (?, ?, NOW())",
+          [number, pesankirim],
+          (err, results) => {
+            if (err) {
+              console.error("Terjadi kesalahan saat menyimpan pesan:", err);
+            } else {
+              console.info("Pesan berhasil disimpan ke database.");
+            }
+          }
+        );
         res
           .status(200)
           .json({ status: true, response: "Message sent successfully!" });
@@ -437,6 +481,19 @@ app.post("/send-message", async (req, res) => {
                 console.info("File deleted successfully.");
               }
             });
+
+            // Simpan pesan ke database jika berhasil terkirim
+            db.query(
+              "INSERT INTO sent_messages (number, message, tanggal) VALUES (?, ?, NOW())",
+              [number, pesankirim],
+              (err, results) => {
+                if (err) {
+                  console.error("Terjadi kesalahan saat menyimpan pesan:", err);
+                } else {
+                  console.info("Pesan berhasil disimpan ke database.");
+                }
+              }
+            );
 
             res
               .status(200)
@@ -489,14 +546,12 @@ app.post("/logout", async (req, res) => {
 
 // Endpoint untuk mendapatkan informasi user
 app.get("/get-user", async (req, res) => {
-  res
-    .status(200)
-    .json({
-      status: true,
-      nomor: info_device,
-      nama: wa_nama,
-      profilePicUrl: info_device_profilePicUrl,
-    });
+  res.status(200).json({
+    status: true,
+    nomor: info_device,
+    nama: wa_nama,
+    profilePicUrl: info_device_profilePicUrl,
+  });
 });
 
 // Endpoint untuk mendapatkan URL webhook
@@ -506,12 +561,10 @@ app.get("/webhook-url", (req, res) => {
     (err, results) => {
       if (err) {
         console.error("Terjadi kesalahan saat mengambil URL webhook:", err);
-        return res
-          .status(500)
-          .json({
-            status: false,
-            message: "Terjadi kesalahan saat mengambil URL webhook",
-          });
+        return res.status(500).json({
+          status: false,
+          message: "Terjadi kesalahan saat mengambil URL webhook",
+        });
       }
       res.json({
         url: results[0] ? results[0].url : null,
@@ -531,12 +584,10 @@ app.post("/update-webhook-url", (req, res) => {
       (err) => {
         if (err) {
           console.error("Terjadi kesalahan saat memperbarui URL webhook:", err);
-          return res
-            .status(500)
-            .json({
-              status: false,
-              message: "Terjadi kesalahan saat memperbarui URL webhook",
-            });
+          return res.status(500).json({
+            status: false,
+            message: "Terjadi kesalahan saat memperbarui URL webhook",
+          });
         }
         res
           .status(200)
@@ -591,5 +642,5 @@ app.post("/webhook", (req, res) => {
 // Memulai server
 connectToWhatsApp().catch((err) => console.log("unexpected error: " + err));
 server.listen(port, () => {
-  console.log("Server Berjalan pada Port : " + port);
+  console.log(`Server Berjalan Di Port : ${port}`);
 });

@@ -8,85 +8,88 @@ $result = $conn->query($query);
 
 $apiUrl = "";
 if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $apiUrl = $row['web_url'];
+  $row = $result->fetch_assoc();
+  $apiUrl = $row['web_url'];
 }
 
 // Fungsi untuk mendapatkan file dalam folder upload
-function getUploadedFiles() {
-    $folderPath = './uploads/';
-    $files = scandir($folderPath);
-    $files = array_diff($files, array('.', '..'));
-    return $files;
+function getUploadedFiles()
+{
+  $folderPath = './uploads/';
+  $files = scandir($folderPath);
+  $files = array_diff($files, array('.', '..'));
+  return $files;
 }
 
 // Fungsi untuk mengupload file ke folder upload
-function uploadFile($file) {
-    $targetDir = './uploads/';
-    $file_name = $file['name'];
-    $temp_name = $file['tmp_name'];
-    $file_size = $file['size'];
-    $file_type = $file['type'];
-    $file_error = $file['error'];
+function uploadFile($file)
+{
+  $targetDir = './uploads/';
+  $file_name = $file['name'];
+  $temp_name = $file['tmp_name'];
+  $file_size = $file['size'];
+  $file_type = $file['type'];
+  $file_error = $file['error'];
 
-    // Cek apakah file berhasil diupload
-    if ($file_error === 0) {
-        // Cek ukuran file 1MB
-        if ($file_size > 1000000) {
-            $_SESSION['message'] = "Maaf, ukuran file Anda terlalu besar.";
-            $_SESSION['message_type'] = 'error';
-            return false;
-        } else {
-            // Cek tipe file
-            $fileExt = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-            $allowedExt = array('jpg', 'jpeg', 'png', 'gif');
-            if (in_array($fileExt, $allowedExt)) {
-                $newFileName = uniqid() . "." . $fileExt;
-                $fileDestination = $targetDir . $newFileName;
-                move_uploaded_file($temp_name, $fileDestination);
-                $_SESSION['message'] = "File berhasil diupload!";
-                $_SESSION['message_type'] = 'success';
-                return $newFileName; // Mengembalikan nama file yang baru diupload
-            } else {
-                $_SESSION['message'] = "Maaf, tipe file Anda tidak diizinkan.";
-                $_SESSION['message_type'] = 'error';
-                return false;
-            }
-        }
+  // Cek apakah file berhasil diupload
+  if ($file_error === 0) {
+    // Cek ukuran file 5MB
+    if ($file_size > 5000000) {
+      $_SESSION['message'] = "Maaf, ukuran file Anda terlalu besar.";
+      $_SESSION['message_type'] = 'error';
+      return false;
     } else {
-        $_SESSION['message'] = "Maaf, terjadi kesalahan saat mengupload file.";
+      // Cek tipe file
+      $fileExt = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+      $allowedExt = array('jpg', 'jpeg', 'png', 'gif');
+      if (in_array($fileExt, $allowedExt)) {
+        $newFileName = uniqid() . "." . $fileExt;
+        $fileDestination = $targetDir . $newFileName;
+        move_uploaded_file($temp_name, $fileDestination);
+        $_SESSION['message'] = "File berhasil diupload!";
+        $_SESSION['message_type'] = 'success';
+        return $newFileName; // Mengembalikan nama file yang baru diupload
+      } else {
+        $_SESSION['message'] = "Maaf, tipe file Anda tidak diizinkan.";
         $_SESSION['message_type'] = 'error';
         return false;
+      }
     }
+  } else {
+    $_SESSION['message'] = "Maaf, terjadi kesalahan saat mengupload file.";
+    $_SESSION['message_type'] = 'error';
+    return false;
+  }
 }
 
 // Fungsi untuk menghapus file dari folder upload
-function deleteFile($file) {
-    $filePath = './uploads/' . $file;
-    if (file_exists($filePath)) {
-        unlink($filePath);
-        $_SESSION['message'] = "File berhasil dihapus!";
-        $_SESSION['message_type'] = 'success';
-        return true;
-    } else {
-        $_SESSION['message'] = "Maaf, file tidak ditemukan.";
-        $_SESSION['message_type'] = 'error';
-        return false;
-    }
+function deleteFile($file)
+{
+  $filePath = './uploads/' . $file;
+  if (file_exists($filePath)) {
+    unlink($filePath);
+    $_SESSION['message'] = "File berhasil dihapus!";
+    $_SESSION['message_type'] = 'success';
+    return true;
+  } else {
+    $_SESSION['message'] = "Maaf, file tidak ditemukan.";
+    $_SESSION['message_type'] = 'error';
+    return false;
+  }
 }
 
 // Cek apakah form di-submit dan panggil fungsi upload
 $newFileName = "";
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_FILES['fileToUpload'])) {
-        $newFileName = uploadFile($_FILES['fileToUpload']);
-    }
-    if (isset($_POST['deleteFile'])) {
-        $deleteResult = deleteFile($_POST['deleteFile']);
-    }
-    // Redirect untuk menghindari resubmission
-    header("Location: " . $_SERVER['PHP_SELF']);
-    exit();
+  if (isset($_FILES['fileToUpload'])) {
+    $newFileName = uploadFile($_FILES['fileToUpload']);
+  }
+  if (isset($_POST['deleteFile'])) {
+    $deleteResult = deleteFile($_POST['deleteFile']);
+  }
+  // Redirect untuk menghindari resubmission
+  header("Location: " . $_SERVER['PHP_SELF']);
+  exit();
 }
 
 $uploadedFiles = getUploadedFiles();
@@ -103,7 +106,7 @@ $uploadedFiles = getUploadedFiles();
   <meta
     name="viewport"
     content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes" />
-    <link rel="icon" href="./assets/icon.svg" />
+  <link rel="icon" href="./assets/icon.svg" />
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
@@ -124,7 +127,7 @@ $uploadedFiles = getUploadedFiles();
       position: fixed;
       left: 0;
       top: 0;
-      background: #03773f;
+      background: #007bff;
       color: #fff;
       padding: 20px;
       display: none;
@@ -205,7 +208,7 @@ $uploadedFiles = getUploadedFiles();
         left: 0;
         width: 250px;
         height: 100vh;
-        background: #03773f;
+        background: #007bff;
         z-index: 99;
       }
 
@@ -224,7 +227,7 @@ $uploadedFiles = getUploadedFiles();
     }
 
     .form h1 {
-      background: #03773f;
+      background: #007bff;
       padding: 12px 0;
       font-weight: 300;
       text-align: center;
@@ -253,7 +256,8 @@ $uploadedFiles = getUploadedFiles();
       border-collapse: collapse;
     }
 
-    .folder-container th, .folder-container td {
+    .folder-container th,
+    .folder-container td {
       padding: 12px;
       text-align: left;
       border-bottom: 1px solid #ddd;
@@ -288,9 +292,14 @@ $uploadedFiles = getUploadedFiles();
     }
 
     .folder-container img {
-      width: 100px;
-      height: 100px;
+      width: 50px;
+      height: 50px;
       object-fit: cover;
+      cursor: pointer; /* Tambahkan untuk membuat gambar dapat diklik */
+    }
+
+    .folder-container img:hover {
+      opacity: 0.8; /* Tambahkan untuk memberikan efek hover pada gambar */
     }
 
     .folder-container a {
@@ -310,6 +319,7 @@ $uploadedFiles = getUploadedFiles();
       border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
+      transition: background-color 0.3s ease;
     }
 
     .btn-danger:hover {
@@ -319,45 +329,50 @@ $uploadedFiles = getUploadedFiles();
 </head>
 
 <body>
-  <div id="hamburger" class="hamburger">
-    <i class="fas fa-bars"></i>
-  </div>
-  <div id="sidebar" class="sidebar">
-    <h2>Menu</h2>
-    <ul>
-      <li><a href="index.php"><i class="fas fa-home"></i> Beranda</a></li>
-      <li><a href="kirim_pesan.php"><i class="fas fa-envelope"></i> Kirim Pesan</a></li>
-      <li><a href="setting.php"><i class="fas fa-cog"></i> Server Setting</a></li>
-      <li><a href="folder.php"><i class="fas fa-folder"></i> Folder</a></li>
-    </ul>
-    <br>
-    <button id="logout-btn" class="btn btn-primary">Logout</button>
-    <br>
-    <p style="text-align: center; font-size: 12px; margin-top: 10px;">Copyright © 2024 API GATEWAY</p>
-    <p style="text-align: center; font-size: 12px; margin-top: 10px;">Version 24.08.15</p>
-  </div>
+  <?php include 'layout/sidebar.php'; ?>
 
   <div class="content">
     <div class="form">
-      <h1>Folder Upload</h1>
+      <h1>File Upload dan Management</h1>
+
+      <?php if (isset($_SESSION['message'])): ?>
+        <div class="alert alert-<?php echo $_SESSION['message_type']; ?>">
+          <?php echo $_SESSION['message'];
+          unset($_SESSION['message']); ?>
+        </div>
+      <?php endif; ?>
+
+      <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+          <label for="fileToUpload" class="form-label">Pilih file untuk diupload:</label>
+          <input type="file" name="fileToUpload" id="fileToUpload" class="form-control">
+        </div>
+        <input type="submit" value="Upload File" name="submit" class="btn btn-primary">
+      </form>
+
       <div class="folder-container">
-        <table class="table table-striped">
+        <h2>Daftar File</h2>
+        <table class="table">
           <thead>
             <tr>
               <th>Nama File</th>
+              <th>Ukuran</th>
+              <th>Tipe</th>
               <th>Preview</th>
-              <th>Hapus</th>
+              <th>Aksi</th>
             </tr>
           </thead>
           <tbody>
             <?php foreach ($uploadedFiles as $file): ?>
               <tr>
-                <td><a href="uploads/<?php echo $file; ?>" target="_blank"><?php echo $file; ?></a></td>
-                <td><img src="uploads/<?php echo $file; ?>" alt="<?php echo $file; ?>"></td>
+                <td><?php echo $file; ?></td>
+                <td><?php echo filesize('./uploads/' . $file) . ' bytes'; ?></td>
+                <td><?php echo pathinfo($file, PATHINFO_EXTENSION); ?></td>
+                <td><img src="./uploads/<?php echo $file; ?>" alt="<?php echo $file; ?>" onclick="window.open('./uploads/<?php echo $file; ?>', '_blank')"></td> <!-- Tambahkan onclick untuk membuka gambar dalam tab baru -->
                 <td>
-                  <form action="folder.php" method="post" style="display:inline;">
+                  <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post" style="display:inline;">
                     <input type="hidden" name="deleteFile" value="<?php echo $file; ?>">
-                    <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+                    <input type="submit" value="Hapus" class="btn btn-danger">
                   </form>
                 </td>
               </tr>
@@ -366,69 +381,13 @@ $uploadedFiles = getUploadedFiles();
         </table>
       </div>
     </div>
-    <div class="form">
-      <h1>Upload Gambar</h1>
-      <form action="folder.php" method="post" enctype="multipart/form-data">
-        <input type="file" name="fileToUpload" id="fileToUpload" accept="image/*">
-        <input type="submit" value="Upload Image" name="submit">
-      </form>
-      <?php if ($newFileName): ?>
-        <div class="mt-3">
-          <h3>Gambar Baru:</h3>
-          <img src="uploads/<?php echo $newFileName; ?>" alt="<?php echo $newFileName; ?>" style="width: 100%; max-width: 300px; border: 1px solid #ddd;">
-        </div>
-      <?php endif; ?>
-    </div>
   </div>
 
-  <!-- SweetAlert Script -->
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
-      document.addEventListener("DOMContentLoaded", function() {
-          <?php if (isset($_SESSION['message'])): ?>
-              Swal.fire({
-                  icon: '<?php echo $_SESSION['message_type']; ?>',
-                  title: '<?php echo $_SESSION['message']; ?>',
-                  showConfirmButton: true
-              });
-              <?php unset($_SESSION['message']); unset($_SESSION['message_type']); ?>
-          <?php endif; ?>
-      });
-  </script>
-
-  <script>
-   // Event listener untuk hamburger
-   document.getElementById("hamburger").addEventListener("click", () => {
-      const sidebar = document.getElementById("sidebar");
-      const hamburger = document.getElementById("hamburger");
-
-      sidebar.classList.toggle("active");
-
-      // Periksa apakah sidebar sedang aktif
-      if (sidebar.classList.contains("active")) {
-        hamburger.style.display = "none"; // Sembunyikan hamburger
-      } else {
-        hamburger.style.display = "block"; // Tampilkan hamburger
-      }
-    });
-
-    // Event listener untuk klik di luar sidebar
-    document.addEventListener("click", (event) => {
-      const sidebar = document.getElementById("sidebar");
-      const hamburger = document.getElementById("hamburger");
-
-      // Periksa apakah sidebar sedang aktif
-      if (sidebar.classList.contains("active")) {
-        const isClickInsideSidebar = sidebar.contains(event.target);
-        const isClickHamburger = hamburger.contains(event.target);
-
-        // Jika klik di luar sidebar dan bukan di hamburger, tutup sidebar
-        if (!isClickInsideSidebar && !isClickHamburger) {
-          sidebar.classList.remove("active");
-          hamburger.style.display = "block"; // Tampilkan kembali hamburger
-        }
-      }
-    });
+    function toggleSidebar() {
+      const sidebar = document.querySelector('.sidebar');
+      sidebar.classList.toggle('active');
+    }
   </script>
 </body>
 
