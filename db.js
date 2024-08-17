@@ -4,6 +4,7 @@ let connection;
 
 function handleDisconnect() {
   connection = mysql.createConnection({
+    //conek database js
     host: '127.0.0.1', // Ganti dengan IP server MySQL
     user: 'root', // Ganti dengan username MySQL Anda
     password: '123', // Ganti dengan password MySQL Anda

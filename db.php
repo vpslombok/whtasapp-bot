@@ -1,12 +1,12 @@
 <?php
-// Koneksi ke basis data
-$servername = "127.0.0.1";
-$username = "root";
-$password = "123";
-$dbname = "webhookdb";
+// Koneksi database php
+$host = '127.0.0.1'; // Ganti dengan IP server MySQL
+$user = 'root'; // Ganti dengan username MySQL Anda
+$password = '123'; // Ganti dengan password MySQL Anda
+$dbname = 'webhookdb';
 
 // Membuat koneksi
-$conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($host, $user, $password, $dbname);
 
 // Memeriksa koneksi
 if ($conn->connect_error) {

@@ -118,6 +118,16 @@ include 'layout/sidebar.php';
                         <div class="mb-3">
                             <label for="pesan_keluar" class="form-label">Pesan Keluar</label>
                             <textarea class="form-control" id="pesan_keluar" name="pesan_keluar" rows="4" placeholder="Masukkan pesan keluar"></textarea>
+                            <br>
+                            <div class="alert alert-info" role="alert">
+                                Catatan: Variabel yang dapat digunakan :
+                                <br>
+                                - ${namaPengirim}
+                                <br>
+                                - ${waktuSekarang}
+                                <br>
+                                - ${tanggalSekarang}
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary" name="submit_tambah">Simpan</button>
                     </form>

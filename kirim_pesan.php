@@ -1,3 +1,17 @@
+<?php
+include 'db.php';
+
+// ambil data web_url terbaru berdasarkan updated_at dari table webhook_urls dan di web_url tidak null
+$query = "SELECT web_url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1";
+$result = $conn->query($query);
+
+$apiUrl = "";
+if ($result && $result->num_rows > 0) {
+  $row = $result->fetch_assoc();
+  $apiUrl = $row['web_url'];
+}
+?>
+
 <?php include 'layout/header.php'; ?>
 <?php include 'layout/sidebar.php'; ?>
 
@@ -29,22 +43,27 @@
   const nomorInput = document.getElementById("nomor-input");
   const fileInput = document.getElementById("file-input");
   const kirimPesanBtn = document.getElementById("kirim-pesan-btn");
+ 
+  const apiUrl = "<?php echo $apiUrl; ?>"; // Gunakan URL API yang diambil dari database
 
   async function kirimPesan() {
     const pesan = pesanInput.value;
     const nomor = nomorInput.value;
     const file = fileInput.files[0];
-    if (!pesan || !nomor || !file) {
-      alert("Mohon isi pesan, nomor tujuan, dan pilih file.");
+    if (!pesan || !nomor) {
+      Swal.fire({
+        title: "Kirim Pesan",
+        text: "Mohon isi pesan dan nomor tujuan.",
+        icon: "error",
+      });
       return;
     }
     try {
       const formData = new FormData();
       formData.append("message", pesan);
       formData.append("number", nomor);
-      formData.append("file_dikirim", file, file.name);
-
-      const response = await fetch("http://localhost:3100/send-message", {
+      formData.append("file_dikirim", file); // Sesuaikan dengan contoh pada file_context_0
+      const response = await fetch(apiUrl + "/send-message", {
         method: "POST",
         body: formData,
       });
@@ -52,25 +71,30 @@
       if (result.status) {
         Swal.fire({
           title: "Kirim Pesan",
-          text: `Berhasil terkirim ke: ${nomor}`,
+          text: result.response,
           icon: "success",
         });
       } else {
         Swal.fire({
           title: "Kirim Pesan",
-          text: "Tidak ada pesan.",
+          text: result.response,
           icon: "error",
         });
       }
+      // Tampilkan pesan respons API
+      console.log(`${result.message ? result.message : result.response}`);
     } catch (error) {
       console.error("Error sending message:", error);
-      alert("Error sending message.");
+      Swal.fire({
+        title: "Kirim Pesan",
+        text: "Gagal mengirim pesan. Silakan coba lagi.",
+        icon: "error",
+      });
     }
   }
 
   kirimPesanBtn.addEventListener("click", kirimPesan);
 
-  // Event listener untuk hamburger
   document.getElementById("hamburger").addEventListener("click", () => {
     const sidebar = document.getElementById("sidebar");
     const hamburger = document.getElementById("hamburger");

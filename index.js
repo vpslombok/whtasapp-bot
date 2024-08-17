@@ -307,11 +307,12 @@ async function connectToWhatsApp() {
 
             // Kirim balasan setelah loop selesai
             sock.sendMessage(noWa, { text: balasan });
+            noWhatsapp = noWa.replace("@s.whatsapp.net", "");
 
             // Simpan balasan ke database send_messages
             db.query(
-              `INSERT INTO send_messages (number, message) VALUES (?, ?)`,
-              [noWa, balasan],
+              `INSERT INTO sent_messages (number, message, tanggal) VALUES (?, ?, NOW())`,
+              [noWhatsapp, balasan],
               (err, results) => {
                 if (err) {
                   console.error("Error saving message to send_messages:", err);
@@ -446,7 +447,7 @@ app.post("/send-message", async (req, res) => {
         );
         res
           .status(200)
-          .json({ status: true, response: "Message sent successfully!" });
+          .json({ status: true, response: "Pesan Berhasil Dikirim ke " + number });
       } else {
         res.status(500).json({
           status: false,
@@ -462,9 +463,10 @@ app.post("/send-message", async (req, res) => {
         if (err) {
           return res
             .status(500)
-            .json({ status: false, response: "Failed to save file." });
+            .json({ status: false, response: "Gagal Menyimpan File" });
         }
 
+        
         const exists = await sock.onWhatsApp(numberWA);
         if (exists?.jid || (exists && exists[0]?.jid)) {
           const extensionName = path.extname(filePath);
@@ -476,9 +478,9 @@ app.post("/send-message", async (req, res) => {
 
             fs.unlink(filePath, (unlinkErr) => {
               if (unlinkErr) {
-                console.error("Error deleting file:", unlinkErr);
+                console.error("Gagal menghapus file:", unlinkErr);
               } else {
-                console.info("File deleted successfully.");
+                console.info("File berhasil dihapus.");
               }
             });
 
@@ -494,15 +496,14 @@ app.post("/send-message", async (req, res) => {
                 }
               }
             );
-
             res
               .status(200)
-              .json({ status: true, message: "Image sent successfully!" });
+              .json({ status: true, message: "Image Berhasil Dikirim" });
           } else {
             fs.unlink(filePath, () => {}); // Delete the file if not valid
             res
               .status(500)
-              .json({ status: false, response: "Invalid file type." });
+              .json({ status: false, response: "Tipe File Tidak Valid" });
           }
         } else {
           res.status(500).json({

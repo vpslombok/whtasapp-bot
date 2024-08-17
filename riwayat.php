@@ -11,6 +11,15 @@ if (isset($_GET['id'])) {
     mysqli_query($conn, $query);
     header('Location: riwayat.php');
 }
+
+// hapus data secara cepat menggunakan checkbox
+if (isset($_POST['hapus'])) {
+    foreach ($_POST['checked'] as $id) {
+        $query = "DELETE FROM sent_messages WHERE id = $id";
+        mysqli_query($conn, $query);
+    }
+    header('Location: riwayat.php');
+}
 ?>
 
 <?php
@@ -25,35 +34,40 @@ include 'layout/sidebar.php';
     <div class="form-riwayat">
         <h2>Riwayat Pesan Terkirim</h2>
         <div class="table-responsive">
-            <table class="table table-bordered table-striped">
-                <thead>
-                    <tr>
-                        <th>No</th>
-                        <th>Nomor Tujuan</th>
-                        <th>Pesan</th>
-                        <th>Tanggal</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $no = 1;
-                    if (mysqli_num_rows($result) > 0) {
-                        while ($riwayat = mysqli_fetch_array($result)) {
-                            echo "<tr>";
-                            echo "<td>" . $no++ . "</td>";
-                            echo "<td>" . $riwayat['number'] . "</td>";
-                            echo "<td>" . $riwayat['message'] . "</td>";
-                            echo "<td>" . $riwayat['tanggal'] . "</td>";
-                            echo "<td><a href='riwayat.php?id=" . $riwayat['id'] . "' class='btn btn-danger'>Hapus</a></td>";
-                            echo "</tr>";
+            <form action="riwayat.php" method="post">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAll"></th>
+                            <th>No</th>
+                            <th>Nomor Tujuan</th>
+                            <th>Pesan</th>
+                            <th>Tanggal</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $no = 1;
+                        if (mysqli_num_rows($result) > 0) {
+                            while ($riwayat = mysqli_fetch_array($result)) {
+                                echo "<tr>";
+                                echo "<td><input type='checkbox' name='checked[]' value='" . $riwayat['id'] . "'></td>";
+                                echo "<td>" . $no++ . "</td>";
+                                echo "<td>" . $riwayat['number'] . "</td>";
+                                echo "<td>" . $riwayat['message'] . "</td>";
+                                echo "<td>" . $riwayat['tanggal'] . "</td>";
+                                echo "<td><a href='riwayat.php?id=" . $riwayat['id'] . "' class='btn btn-danger'>Hapus</a></td>";
+                                echo "</tr>";
+                            }
+                        } else {
+                            echo "<tr><td colspan='6'>Tidak ada data riwayat pesan.</td></tr>";
                         }
-                    } else {
-                        echo "<tr><td colspan='5'>Tidak ada data riwayat pesan.</td></tr>";
-                    }
-                    ?>
-                </tbody>
-            </table>
+                        ?>
+                    </tbody>
+                </table>
+                <button type="submit" name="hapus" class="btn btn-primary">Hapus yang Dipilih</button>
+            </form>
         </div>
     </div>
 </div>
@@ -93,6 +107,20 @@ include 'layout/sidebar.php';
                 sidebar.classList.remove("active");
                 hamburger.style.display = "block"; // Tampilkan kembali hamburger
             }
+        }
+    });
+
+    // Tambahkan event listener untuk select all checkbox
+    document.getElementById("selectAll").addEventListener("click", function() {
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        if (this.checked) {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+        } else {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
         }
     });
 </script>
