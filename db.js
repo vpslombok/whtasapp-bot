@@ -5,10 +5,10 @@ let connection;
 function handleDisconnect() {
   connection = mysql.createConnection({
     //conek database js
-    host: '127.0.0.1', // Ganti dengan IP server MySQL
-    user: 'root', // Ganti dengan username MySQL Anda
-    password: '123', // Ganti dengan password MySQL Anda
-    database: 'webhookdb'
+    host: 'bdeaoblcrmhzuzixz9lu-mysql.services.clever-cloud.com', // Ganti dengan IP server MySQL
+    user: 'uaihieeeuy2yjzsi', // Ganti dengan username MySQL Anda
+    password: 'If8lMe9XdA5THvIZb4Wn', // Ganti dengan password MySQL Anda
+    database: 'bdeaoblcrmhzuzixz9lu'
   });
 
   // Sambungkan ke database
