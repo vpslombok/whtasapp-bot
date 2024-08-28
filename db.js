@@ -7,7 +7,7 @@ function handleDisconnect() {
     //conek database js
     host: 'bdeaoblcrmhzuzixz9lu-mysql.services.clever-cloud.com', // Ganti dengan IP server MySQL
     user: 'uaihieeeuy2yjzsi', // Ganti dengan username MySQL Anda
-    password: 'If8lMe9XdA5THvIZb4Wn', // Ganti dengan password MySQL Anda
+    password: 'aVw6FpQ2JcmOlbvLGWgt', // Ganti dengan password MySQL Anda
     database: 'bdeaoblcrmhzuzixz9lu'
   });
 
