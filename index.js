@@ -20,6 +20,7 @@ const qrcode = require("qrcode"); // Menggunakan library qrcode untuk mengatur Q
 const moment = require("moment-timezone"); // Menggunakan library moment-timezone untuk mengatur waktu
 const axios = require("axios"); // Menggunakan library axios untuk mengirim permintaan
 const db = require("./db"); // Import koneksi database
+const client = require("./db");
 
 const app = express();
 app.use(bodyParser.json()); // Menggunakan library body-parser untuk mengatur permintaan
@@ -32,6 +33,13 @@ const store = makeInMemoryStore({
   logger: pino().child({ level: "silent", stream: "store" }),
 }); // Menggunakan library pino untuk logging
 
+app.use("/assets", express.static(__dirname + "./assets"));
+
+app.get("/", (req, res) => {
+  res.sendFile("./index.php", {
+    root: __dirname,
+  });
+});
 // Variabel untuk menyimpan data
 let sock,
   qr,
@@ -93,64 +101,40 @@ async function connectToWhatsApp() {
   });
   store.bind(sock.ev);
   sock.multi = true;
-
-  // Event untuk mengupdate koneksi
   sock.ev.on("connection.update", async (update) => {
+    //console.log(update);
     const { connection, lastDisconnect } = update;
-
     if (connection === "close") {
-      const reason =
-        lastDisconnect.error?.output?.statusCode || "Tidak Diketahui";
-      console.log(`Koneksi ditutup dengan alasan: ${reason}`);
-
-      switch (reason) {
-        case DisconnectReason.badSession:
-          console.log(
-            `File Sesi Buruk, Silakan Hapus ${session} dan Scan Lagi`
-          );
-          await sock.logout();
-          break;
-        case DisconnectReason.connectionClosed:
-          console.log("Koneksi ditutup, menghubungkan kembali...");
-          await connectToWhatsApp();
-          break;
-        case DisconnectReason.connectionLost:
-          console.log("Koneksi Hilang dari Server, menghubungkan kembali...");
-          await connectToWhatsApp();
-          break;
-        case DisconnectReason.connectionReplaced:
-          console.log(
-            "Koneksi Digantikan, Sesi Baru Lain Dibuka, Silakan Tutup Sesi Saat Ini Terlebih Dahulu"
-          );
-          await sock.logout();
-          break;
-        case DisconnectReason.loggedOut:
-          console.log(
-            `Perangkat Keluar, Silakan Hapus ${session} dan Scan Lagi.`
-          );
-          if (fs.existsSync(session)) {
-            fs.rmSync(session, { recursive: true });
-            console.log(`${session} telah dihapus.`);
-          }
-          await sock.logout();
-          break;
-        case DisconnectReason.restartRequired:
-          console.log("Restart Diperlukan, Mengulang...");
-          await connectToWhatsApp();
-          break;
-        case DisconnectReason.timedOut:
-          console.log("Koneksi Kedaluwarsa, Menghubungkan kembali...");
-          await connectToWhatsApp();
-          break;
-        default:
-          console.log(
-            `Alasan DisconnectReason Tidak Diketahui: ${reason}|${lastDisconnect.error}`
-          );
-          sock.end(
-            `Alasan DisconnectReason Tidak Diketahui: ${reason}|${lastDisconnect.error}`
-          );
-          await connectToWhatsApp();
-          break;
+      let reason = new Boom(lastDisconnect.error).output.statusCode;
+      if (reason === DisconnectReason.badSession) {
+        console.log(
+          `Bad Session File, Please Delete ${session} and Scan Again`
+        );
+        sock.logout();
+      } else if (reason === DisconnectReason.connectionClosed) {
+        console.log("Connection closed, reconnecting....");
+        connectToWhatsApp();
+      } else if (reason === DisconnectReason.connectionLost) {
+        console.log("Connection Lost from Server, reconnecting...");
+        connectToWhatsApp();
+      } else if (reason === DisconnectReason.connectionReplaced) {
+        console.log(
+          "Connection Replaced, Another New Session Opened, Please Close Current Session First"
+        );
+        sock.logout();
+      } else if (reason === DisconnectReason.loggedOut) {
+        console.log(
+          `Device Logged Out, Please Delete ${session} and Scan Again.`
+        );
+        sock.logout();
+      } else if (reason === DisconnectReason.restartRequired) {
+        console.log("Restart Required, Restarting...");
+        connectToWhatsApp();
+      } else if (reason === DisconnectReason.timedOut) {
+        console.log("Connection TimedOut, Reconnecting...");
+        connectToWhatsApp();
+      } else {
+        sock.end(`Unknown DisconnectReason: ${reason}|${lastDisconnect.error}`);
       }
     } else if (connection === "open") {
       info_device = sock.user.id
@@ -189,18 +173,18 @@ async function connectToWhatsApp() {
     }
   }
 
-  // Menggunakan koneksi database untuk mengambil URL webhook terbaru
-  db.query(
+  // Menjalankan query untuk mengambil URL webhook terbaru
+  client.query(
     "SELECT web_url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1",
-    (err, results) => {
+    (err, res) => {
       if (err) {
         console.error("Error executing query:", err);
       } else {
-        if (results.length > 0) {
-          weburl = results[0].web_url;
+        if (res.rows.length > 0) {
+          const weburl = res.rows[0].web_url;
           soket?.emit("weburl", weburl);
         } else {
-          console.error("No webhook URL found in database");
+          console.error("Tidak ditemukan URL webhook dalam database");
         }
       }
     }
@@ -434,7 +418,7 @@ app.post("/send-message", async (req, res) => {
           text: pesankirim,
         });
         // Simpan pesan ke database jika berhasil terkirim
-        db.query(
+        client.query(
           "INSERT INTO sent_messages (number, message, tanggal) VALUES (?, ?, NOW())",
           [number, pesankirim],
           (err, results) => {
@@ -445,9 +429,10 @@ app.post("/send-message", async (req, res) => {
             }
           }
         );
-        res
-          .status(200)
-          .json({ status: true, response: "Pesan Berhasil Dikirim ke " + number });
+        res.status(200).json({
+          status: true,
+          response: "Pesan Berhasil Dikirim ke " + number,
+        });
       } else {
         res.status(500).json({
           status: false,
@@ -466,7 +451,6 @@ app.post("/send-message", async (req, res) => {
             .json({ status: false, response: "Gagal Menyimpan File" });
         }
 
-        
         const exists = await sock.onWhatsApp(numberWA);
         if (exists?.jid || (exists && exists[0]?.jid)) {
           const extensionName = path.extname(filePath);
@@ -485,7 +469,7 @@ app.post("/send-message", async (req, res) => {
             });
 
             // Simpan pesan ke database jika berhasil terkirim
-            db.query(
+            client.query(
               "INSERT INTO sent_messages (number, message, tanggal) VALUES (?, ?, NOW())",
               [number, pesankirim],
               (err, results) => {
@@ -557,9 +541,9 @@ app.get("/get-user", async (req, res) => {
 
 // Endpoint untuk mendapatkan URL webhook
 app.get("/webhook-url", (req, res) => {
-  db.query(
+  client.query(
     "SELECT url, web_url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1",
-    (err, results) => {
+    (err, result) => {
       if (err) {
         console.error("Terjadi kesalahan saat mengambil URL webhook:", err);
         return res.status(500).json({
@@ -568,8 +552,8 @@ app.get("/webhook-url", (req, res) => {
         });
       }
       res.json({
-        url: results[0] ? results[0].url : null,
-        web_url: results[0] ? results[0].web_url : null,
+        url: result.rows[0] ? result.rows[0].url : null,
+        web_url: result.rows[0] ? result.rows[0].web_url : null,
       });
     }
   );
@@ -579,10 +563,10 @@ app.get("/webhook-url", (req, res) => {
 app.post("/update-webhook-url", (req, res) => {
   const { url } = req.body;
   if (url) {
-    db.query(
-      "UPDATE webhook_urls SET url=?, updated_at=NOW() ORDER BY updated_at DESC LIMIT 1",
+    client.query(
+      "UPDATE webhook_urls SET url = $1, updated_at = NOW() WHERE id = (SELECT id FROM webhook_urls ORDER BY updated_at DESC LIMIT 1) RETURNING *",
       [url],
-      (err) => {
+      (err, result) => {
         if (err) {
           console.error("Terjadi kesalahan saat memperbarui URL webhook:", err);
           return res.status(500).json({
@@ -590,9 +574,17 @@ app.post("/update-webhook-url", (req, res) => {
             message: "Terjadi kesalahan saat memperbarui URL webhook",
           });
         }
-        res
-          .status(200)
-          .json({ status: true, message: "Webhook URL updated successfully." });
+        if (result.rowCount > 0) {
+          res.status(200).json({
+            status: true,
+            message: "Webhook URL updated successfully.",
+          });
+        } else {
+          res.status(404).json({
+            status: false,
+            message: "Tidak ada URL webhook yang ditemukan untuk diperbarui.",
+          });
+        }
       }
     );
   } else {
@@ -602,7 +594,7 @@ app.post("/update-webhook-url", (req, res) => {
 
 // Endpoint untuk webhook
 app.post("/webhook", (req, res) => {
-  db.query(
+  client.query(
     "SELECT url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1",
     (err, results) => {
       if (err) {
@@ -641,6 +633,7 @@ app.post("/webhook", (req, res) => {
   );
 });
 // Memulai server
+
 connectToWhatsApp().catch((err) => console.log("unexpected error: " + err));
 server.listen(port, () => {
   console.log(`Server Berjalan Di Port : ${port}`);
