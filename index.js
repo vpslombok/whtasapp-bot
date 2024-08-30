@@ -207,20 +207,21 @@ async function connectToWhatsApp() {
   );
 
   // Fungsi untuk mendapatkan URL webhook
-  async function getWebhookUrl() {
-    try {
-      const response = await fetch(`${weburl}/webhook-url`);
-      const result = await response.json();
-      if (result.url) {
-        return result.url;
-      } else {
-        throw new Error("No webhook URL found");
-      }
-    } catch (error) {
-      console.error("Error fetching webhook URL:", error);
-      throw error;
+async function getWebhookUrl() {
+  try {
+    const response = await fetch(`${weburl}/webhook-url`);
+    const result = await response.json();
+    if (result.url) {
+      return result.url;
+    } else {
+      throw new Error("No webhook URL found");
     }
+  } catch (error) {
+    console.error("Error fetching webhook URL:", error);
+    // Restart server jika terjadi error
+    process.exit(1); // Mengakhiri proses dengan kode status 1
   }
+}
 
   // Event untuk mengupdate creds
   sock.ev.on("creds.update", saveCreds);
