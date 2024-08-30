@@ -207,22 +207,21 @@ async function connectToWhatsApp() {
   );
 
   // Fungsi untuk mendapatkan URL webhook
-async function getWebhookUrl() {
-  try {
-    const response = await fetch(`${weburl}/webhook-url`);
-    const result = await response.json();
-    if (result.url) {
-      return result.url;
-    } else {
-      throw new Error("No webhook URL found");
+  async function getWebhookUrl() {
+    try {
+      const response = await fetch(`${weburl}/webhook-url`);
+      const result = await response.json();
+      if (result.url) {
+        return result.url;
+      } else {
+        throw new Error("No webhook URL found");
+      }
+    } catch (error) {
+      console.error("Error fetching webhook URL:", error);
+      // Restart server jika terjadi error
+      process.exit(1);
     }
-  } catch (error) {
-    console.error("Error fetching webhook URL:", error);
-    // Restart server jika terjadi error
-    process.exit(1); // Mengakhiri proses dengan kode status 1
   }
-}
-
   // Event untuk mengupdate creds
   sock.ev.on("creds.update", saveCreds);
   // Menangani pesan masuk dan mengirimkan data ke webhook
@@ -414,6 +413,48 @@ app.get("/api/qr-code", (req, res) => {
   }
 });
 
+// Endpoint untuk mengirim pesan button
+app.post("/send-button-message", async (req, res) => {
+  const { number, message, buttonText, buttonId } = req.body;
+
+  if (!number || !message || !buttonText || !buttonId) {
+    return res.status(400).json({
+      status: false,
+      response:
+        "Semua parameter diperlukan: number, message, buttonText, buttonId",
+    });
+  }
+
+  const numberWA = "62" + number.substring(1) + "@s.whatsapp.net";
+
+  try {
+    const exists = await sock.onWhatsApp(numberWA);
+    if (exists?.jid || (exists && exists[0]?.jid)) {
+      await sock.sendMessage(exists.jid || exists[0].jid, {
+        button: {
+          text: message,
+          footer: "Klik tombol di bawah ini:",
+          buttons: [
+            { buttonId: buttonId, buttonText: { displayText: buttonText } },
+          ],
+        },
+      });
+
+      res.status(200).json({
+        status: true,
+        response: "Pesan button berhasil dikirim ke " + number,
+      });
+    } else {
+      res.status(500).json({
+        status: false,
+        response: `Nomor ${number} tidak terdaftar.`,
+      });
+    }
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
 // Endpoint untuk mengirim pesan
 app.post("/send-message", async (req, res) => {
   const { message: pesankirim, number } = req.body;
@@ -448,7 +489,10 @@ app.post("/send-message", async (req, res) => {
         );
         res
           .status(200)
-          .json({ status: true, response: "Pesan Berhasil Dikirim ke " + number });
+          .json({
+            status: true,
+            response: "Pesan Berhasil Dikirim ke " + number,
+          });
       } else {
         res.status(500).json({
           status: false,
@@ -467,7 +511,6 @@ app.post("/send-message", async (req, res) => {
             .json({ status: false, response: "Gagal Menyimpan File" });
         }
 
-        
         const exists = await sock.onWhatsApp(numberWA);
         if (exists?.jid || (exists && exists[0]?.jid)) {
           const extensionName = path.extname(filePath);
@@ -643,7 +686,6 @@ app.post("/webhook", (req, res) => {
 });
 // Memulai server
 connectToWhatsApp().catch((err) => console.log("unexpected error: " + err));
-
 
 server.listen(port, () => {
   console.log(`Server Berjalan Di Port : ${port}`);
