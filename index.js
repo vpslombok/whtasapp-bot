@@ -19,7 +19,7 @@ const bodyParser = require("body-parser"); // Menggunakan library body-parser un
 const qrcode = require("qrcode"); // Menggunakan library qrcode untuk mengatur QR
 const moment = require("moment-timezone"); // Menggunakan library moment-timezone untuk mengatur waktu
 const axios = require("axios"); // Menggunakan library axios untuk mengirim permintaan
-const db = require("./db"); // Import koneksi database
+// const db = require("./db"); // Import koneksi database
 
 const app = express();
 app.use(bodyParser.json()); // Menggunakan library body-parser untuk mengatur permintaan
@@ -33,15 +33,7 @@ const store = makeInMemoryStore({
 }); // Menggunakan library pino untuk logging
 
 // Variabel untuk menyimpan data
-let sock,
-  qr,
-  soket,
-  info_device,
-  info_device_profilePicUrl,
-  wa_nama,
-  weburl,
-  pesan_masuk,
-  pesan_keluar;
+let sock, qr, soket, info_device, info_device_profilePicUrl, wa_nama, url_api;
 
 // Middleware untuk mengatur permintaan
 app.use(fileUpload({ createParentPath: true })); // Menggunakan library fileUpload untuk mengatur file
@@ -178,50 +170,57 @@ async function connectToWhatsApp() {
     }
   });
 
-  // Fungsi untuk mengirim data ke webhook
-  async function sendToWebhook(data) {
-    try {
-      const webhookUrl = await getWebhookUrl(); // Ambil URL webhook dari server
-      const response = await axios.post(webhookUrl, data);
-      // console.log("Webhook response:", response.data);
-    } catch (error) {
-      // console.error("Error sending to webhook:", error);
-    }
-  }
+  // // Fungsi untuk mengirim data ke webhook
+  // async function sendToWebhook(data) {
+  //   try {
+  //     const webhookUrl = await getWebhookUrl(); // Ambil URL webhook dari server
+  //     const response = await axios.post(webhookUrl, data);
+  //     // console.log("Webhook response:", response.data);
+  //   } catch (error) {
+  //     // console.error("Error sending to webhook:", error);
+  //   }
+  // }
 
-  // Menggunakan koneksi database untuk mengambil URL webhook terbaru
-  db.query(
-    "SELECT web_url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1",
-    (err, results) => {
-      if (err) {
-        console.error("Error executing query:", err);
-      } else {
-        if (results.length > 0) {
-          weburl = results[0].web_url;
-          soket?.emit("weburl", weburl);
+  // Fungsi untuk mengambil data dari API
+  function fetchLatestUrl() {
+    fetch("http://localhost/control_panel_wa/api/url.php")
+      .then((response) => response.json())
+      .then((data) => {
+        // Pastikan data adalah array dan memiliki setidaknya satu elemen
+        if (Array.isArray(data) && data.length > 0) {
+          url_api = data[0].url_api; // Ambil url_api dari elemen pertama
+          soket?.emit("url_api", url_api);
         } else {
-          console.error("No webhook URL found in database");
+          console.error("Tidak ditemukan url_api dalam basis data");
         }
-      }
-    }
-  );
-
-  // Fungsi untuk mendapatkan URL webhook
-  async function getWebhookUrl() {
-    try {
-      const response = await fetch(`${weburl}/webhook-url`);
-      const result = await response.json();
-      if (result.url) {
-        return result.url;
-      } else {
-        throw new Error("No webhook URL found");
-      }
-    } catch (error) {
-      console.error("Error fetching webhook URL:", error);
-      // Restart server jika terjadi error
-      process.exit(1);
-    }
+      })
+      .catch((err) => {
+        console.error("Error mengambil URL:", err);
+      });
   }
+
+  // Jalankan polling setiap 10 detik (30000 milidetik)
+  setInterval(fetchLatestUrl, 10000);
+
+  // Panggil sekali saat halaman dimuat
+  fetchLatestUrl();
+
+  // // Fungsi untuk mendapatkan URL webhook
+  // async function getWebhookUrl() {
+  //   try {
+  //     const response = await fetch(`${weburl}/webhook-url`);
+  //     const result = await response.json();
+  //     if (result.url) {
+  //       return result.url;
+  //     } else {
+  //       throw new Error("No webhook URL found");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching webhook URL:", error);
+  //     // Restart server jika terjadi error
+  //     process.exit(1);
+  //   }
+  // }
   // Event untuk mengupdate creds
   sock.ev.on("creds.update", saveCreds);
   // Menangani pesan masuk dan mengirimkan data ke webhook
@@ -276,66 +275,78 @@ async function connectToWhatsApp() {
           console.log(`Pesan dari grup ${noWa}: ${pesan}`);
           balasan = `${greeting} *${namaPengirim}*, Mohon Maaf, Fitur Bot Belum Tersedia di Grup`;
         } else {
-          // Deklarasi variabel 'ditemukan' di luar loop
+          // Deklarasi variabel 'ditemukan' di luar
           let ditemukan = false;
 
-          // Ambil data dari database
-          db.query("SELECT * FROM reply", (err, results) => {
-            if (err) {
-              console.error("Error executing query:", err);
-              return;
-            }
+          // Ambil data dari API
+          fetch(`${url_api}/api/reply.php`)
+            .then((response) => response.json())
+            .then((results) => {
+              // Cek setiap pesan dalam data yang diterima
+              results.forEach((result) => {
+                if (pesanMasuk.includes(result.pesan_masuk)) {
+                  // Gantikan placeholder dalam balasan
+                  balasan = result.pesan_keluar
+                    .replace("${namaPengirim}", namaPengirim)
+                    .replace("${noWa}", noWa)
+                    .replace("${tanggalSekarang}", tanggalSekarang)
+                    .replace("${waktuSekarang}", waktuSekarang);
+                  ditemukan = true;
+                }
+              });
 
-            // Cek setiap pesan dalam database
-            results.forEach((result) => {
-              if (pesanMasuk.includes(result.pesan_masuk)) {
-                // Gantikan placeholder dalam balasan
-                balasan = result.pesan_keluar
-                  .replace("${namaPengirim}", namaPengirim)
-                  .replace("${noWa}", noWa)
-                  .replace("${tanggalSekarang}", tanggalSekarang)
-                  .replace("${waktuSekarang}", waktuSekarang);
-                ditemukan = true;
+              // Jika pesan tidak ditemukan dalam data
+              if (!ditemukan) {
+                balasan = `${greeting} *${namaPengirim}*, di WhatsApp Bot Pintar ketik *INFO* untuk Menggunakan Fitur Bot`;
               }
-            });
+              console.log("balasan: " + balasan);
 
-            // Jika pesan tidak ditemukan dalam database
-            if (!ditemukan) {
-              balasan = `${greeting} *${namaPengirim}*, di WhatsApp Bot Pintar ketik *INFO* untuk Menggunakan Fitur Bot`;
-            }
-            console.log("balasan: " + balasan);
+              // Kirim balasan setelah loop selesai
+              sock.sendMessage(noWa, { text: balasan });
+              const noWhatsapp = noWa.replace("@s.whatsapp.net", "");
 
-            // Kirim balasan setelah loop selesai
-            sock.sendMessage(noWa, { text: balasan });
-            noWhatsapp = noWa.replace("@s.whatsapp.net", "");
+              // Simpan balasan ke database send_messages menggunakan API
+              const data = {
+                number: noWhatsapp,
+                message: balasan,
+                tanggal: new Date().toISOString(),
+              };
 
-            // Simpan balasan ke database send_messages
-            db.query(
-              `INSERT INTO sent_messages (number, message, tanggal) VALUES (?, ?, NOW())`,
-              [noWhatsapp, balasan],
-              (err, results) => {
-                if (err) {
-                  console.error("Error saving message to send_messages:", err);
-                } else {
+              fetch(`${url_api}/api/send_message.php`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(data),
+              })
+                .then((response) => response.json())
+                .then((data) => {
                   console.log(
                     "Balasan berhasil disimpan ke database send_messages."
                   );
-                }
-              }
-            );
-          });
+                })
+                .catch((error) => {
+                  console.error(
+                    "Error saving message to send_messages:",
+                    error
+                  );
+                });
+            })
+            .catch((err) => {
+              console.error("Error mengambil data dari API:", err);
+            });
         }
 
-        // Data yang dikirim ke webhook
-        const dataToSend = {
-          number: noWa,
-          name: namaPengirim,
-          message: pesan,
-          timestamp: moment().tz("Asia/Singapore").format(),
-        };
+        // // Data yang dikirim ke webhook
+        // const dataToSend = {
+        //   number: noWa,
+        //   name: namaPengirim,
+        //   message: pesan,
+        //   timestamp: moment().tz("Asia/Singapore").format(),
+        // };
 
-        // Kirim data ke webhook
-        await sendToWebhook(dataToSend);
+        // // Kirim data ke webhook
+        // await sendToWebhook(dataToSend);
       }
     }
   });
@@ -475,24 +486,39 @@ app.post("/send-message", async (req, res) => {
         await sock.sendMessage(exists.jid || exists[0].jid, {
           text: pesankirim,
         });
-        // Simpan pesan ke database jika berhasil terkirim
-        db.query(
-          "INSERT INTO sent_messages (number, message, tanggal) VALUES (?, ?, NOW())",
-          [number, pesankirim],
-          (err, results) => {
-            if (err) {
-              console.error("Terjadi kesalahan saat menyimpan pesan:", err);
-            } else {
+        // Simpan pesan ke database menggunakan API
+        const data = {
+          number: number,
+          message: pesankirim,
+          tanggal: new Date().toISOString(),
+        };
+
+        //simpan pesan ke database via rest api
+        fetch(`${url_api}/api/send_message.php`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.status) {
               console.info("Pesan berhasil disimpan ke database.");
+            } else {
+              console.error(
+                "Terjadi kesalahan saat menyimpan pesan:",
+                data.message
+              );
             }
-          }
-        );
-        res
-          .status(200)
-          .json({
-            status: true,
-            response: "Pesan Berhasil Dikirim ke " + number,
+          })
+          .catch((error) => {
+            console.error("Error saving message to database:", error);
           });
+        res.status(200).json({
+          status: true,
+          response: "Pesan Berhasil Dikirim ke " + number,
+        });
       } else {
         res.status(500).json({
           status: false,
@@ -528,18 +554,27 @@ app.post("/send-message", async (req, res) => {
               }
             });
 
-            // Simpan pesan ke database jika berhasil terkirim
-            db.query(
-              "INSERT INTO sent_messages (number, message, tanggal) VALUES (?, ?, NOW())",
-              [number, pesankirim],
-              (err, results) => {
-                if (err) {
-                  console.error("Terjadi kesalahan saat menyimpan pesan:", err);
-                } else {
-                  console.info("Pesan berhasil disimpan ke database.");
-                }
-              }
-            );
+            // Simpan pesan ke database jika berhasil terkirim melalui API
+            const data = {
+              number: number,
+              message: pesankirim,
+              tanggal: new Date().toISOString(),
+            };
+
+            fetch(`${url_api}/api/send_message.php`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(data),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                console.info("Pesan berhasil disimpan ke database.");
+              })
+              .catch((error) => {
+                console.error("Terjadi kesalahan saat menyimpan pesan:", error);
+              });
             res
               .status(200)
               .json({ status: true, message: "Image Berhasil Dikirim" });
@@ -599,91 +634,6 @@ app.get("/get-user", async (req, res) => {
   });
 });
 
-// Endpoint untuk mendapatkan URL webhook
-app.get("/webhook-url", (req, res) => {
-  db.query(
-    "SELECT url, web_url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1",
-    (err, results) => {
-      if (err) {
-        console.error("Terjadi kesalahan saat mengambil URL webhook:", err);
-        return res.status(500).json({
-          status: false,
-          message: "Terjadi kesalahan saat mengambil URL webhook",
-        });
-      }
-      res.json({
-        url: results[0] ? results[0].url : null,
-        web_url: results[0] ? results[0].web_url : null,
-      });
-    }
-  );
-});
-
-// Endpoint untuk memperbarui URL webhook
-app.post("/update-webhook-url", (req, res) => {
-  const { url } = req.body;
-  if (url) {
-    db.query(
-      "UPDATE webhook_urls SET url=?, updated_at=NOW() ORDER BY updated_at DESC LIMIT 1",
-      [url],
-      (err) => {
-        if (err) {
-          console.error("Terjadi kesalahan saat memperbarui URL webhook:", err);
-          return res.status(500).json({
-            status: false,
-            message: "Terjadi kesalahan saat memperbarui URL webhook",
-          });
-        }
-        res
-          .status(200)
-          .json({ status: true, message: "Webhook URL updated successfully." });
-      }
-    );
-  } else {
-    res.status(400).json({ status: false, message: "URL tidak valid." });
-  }
-});
-
-// Endpoint untuk webhook
-app.post("/webhook", (req, res) => {
-  db.query(
-    "SELECT url FROM webhook_urls ORDER BY updated_at DESC LIMIT 1",
-    (err, results) => {
-      if (err) {
-        console.error("Terjadi kesalahan saat mengambil URL webhook:", err);
-        return res
-          .status(500)
-          .send("Terjadi kesalahan saat mengambil URL webhook");
-      }
-      const webhookUrl = results[0] ? results[0].url : null;
-      if (webhookUrl) {
-        fetch(webhookUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(req.body),
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            console.log("Data sent to webhook:", data);
-            res.status(200).send("Data sent to webhook");
-          })
-          .catch((error) => {
-            console.error(
-              "Terjadi kesalahan saat mengirim data ke webhook:",
-              error
-            );
-            res
-              .status(500)
-              .send("Terjadi kesalahan saat mengirim data ke webhook");
-          });
-      } else {
-        res.status(400).send("Webhook URL is not set");
-      }
-    }
-  );
-});
 // Memulai server
 connectToWhatsApp().catch((err) => console.log("unexpected error: " + err));
 
