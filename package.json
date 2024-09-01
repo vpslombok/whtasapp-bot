@@ -16,7 +16,7 @@
     "@adiwajshing/keyed-db": "^0.2.4",
     "@supabase/supabase-js": "^2.45.2",
     "@whiskeysockets/baileys": "^6.3.1",
-    "axios": "^1.7.3",
+    "axios": "^1.7.7",
     "eslint": "^8.14.0",
     "express": "^4.19.2",
     "express-fileupload": "^1.4.0",
