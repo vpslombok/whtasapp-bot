@@ -1,4 +1,4 @@
-// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const {
   default: makeWASocket, // Menggunakan library baileys untuk WhatsApp
   fetchLatestBaileysVersion,
@@ -186,7 +186,7 @@ async function connectToWhatsApp() {
 
   // Fungsi untuk mengambil data dari API
   function fetchLatestUrl() {
-    fetch("http://localhost/control_panel_wa/api/url.php")
+    fetch("https://lombok.rf.gd/api/url.php")
       .then((response) => response.json())
       .then((data) => {
         // Pastikan data adalah array dan memiliki setidaknya satu elemen
