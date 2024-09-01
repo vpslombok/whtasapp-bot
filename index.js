@@ -1,4 +1,4 @@
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const {
   default: makeWASocket, // Menggunakan library baileys untuk WhatsApp
   fetchLatestBaileysVersion,
@@ -98,9 +98,7 @@ async function connectToWhatsApp() {
 
       switch (reason) {
         case DisconnectReason.badSession:
-          console.log(
-            `File Sesi Buruk, Silakan Hapus ${session} dan Scan Lagi`
-          );
+          console.log(`File Sesi , Silakan Hapus ${session} dan Scan Lagi`);
           await sock.logout();
           break;
         case DisconnectReason.connectionClosed:
@@ -125,7 +123,11 @@ async function connectToWhatsApp() {
             fs.rmSync(session, { recursive: true });
             console.log(`${session} telah dihapus.`);
           }
+          // Membuat folder session baru
+          fs.mkdirSync(session, { recursive: true });
+          console.log(`Folder ${session} telah dibuat.`);
           await sock.logout();
+          await connectToWhatsApp(); // Tambahkan ini untuk restart otomatis
           break;
         case DisconnectReason.restartRequired:
           console.log("Restart Diperlukan, Mengulang...");
@@ -184,7 +186,7 @@ async function connectToWhatsApp() {
 
   // Fungsi untuk mengambil data dari API
   function fetchLatestUrl() {
-    fetch("https://lombok.rf.gd/api/url.php")
+    fetch("http://localhost/control_panel_wa/api/url.php")
       .then((response) => response.json())
       .then((data) => {
         // Pastikan data adalah array dan memiliki setidaknya satu elemen
@@ -309,6 +311,7 @@ async function connectToWhatsApp() {
               // Simpan balasan ke database send_messages menggunakan API
               const data = {
                 number: noWhatsapp,
+                message_in: pesanMasuk,
                 message: balasan,
                 tanggal: new Date().toISOString(),
               };
@@ -490,6 +493,7 @@ app.post("/send-message", async (req, res) => {
         // Simpan pesan ke database menggunakan API
         const data = {
           number: number,
+          message_in: "Dikirim via Web",
           message: pesankirim,
           tanggal: new Date().toISOString(),
         };
@@ -558,6 +562,7 @@ app.post("/send-message", async (req, res) => {
             // Simpan pesan ke database jika berhasil terkirim melalui API
             const data = {
               number: number,
+              message_in: "Dikirim via Web",
               message: pesankirim,
               tanggal: new Date().toISOString(),
             };
