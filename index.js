@@ -11,7 +11,7 @@ const pino = require("pino"); // Menggunakan library pino untuk logging
 const { Boom } = require("@hapi/boom"); // Menggunakan library boom untuk error handling
 const path = require("path"); // Menggunakan library path untuk mengatur path
 const fs = require("fs"); // Menggunakan library fs untuk mengatur file
-const http = require("http"); // Menggunakan library http untuk mengatur server
+const https = require("https"); // Menggunakan library https untuk mengatur server
 const express = require("express"); // Menggunakan library express untuk mengatur server
 const fileUpload = require("express-fileupload");
 const cors = require("cors"); // Menggunakan library cors untuk mengatur permintaan
@@ -20,6 +20,11 @@ const qrcode = require("qrcode"); // Menggunakan library qrcode untuk mengatur Q
 const moment = require("moment-timezone"); // Menggunakan library moment-timezone untuk mengatur waktu
 const axios = require("axios"); // Menggunakan library axios untuk mengirim permintaan
 // const db = require("./db"); // Import koneksi database
+
+// Agent untuk mengabaikan verifikasi SSL
+const agent = new https.Agent({
+  rejectUnauthorized: false
+});
 
 const app = express();
 app.use(bodyParser.json()); // Menggunakan library body-parser untuk mengatur permintaan
@@ -184,27 +189,27 @@ async function connectToWhatsApp() {
   // }
 
 
-// Fungsi untuk mengambil data dari API
-  function fetchLatestUrl() {
- fetch("https://lombok.rf.gd/api/url.php")
-      .then((response) => response.json())
-      .then((data) => {
-        // Pastikan data adalah array dan memiliki setidaknya satu elemen
-        if (Array.isArray(data) && data.length > 0) {
-          url_api = data[0].url_api; // Ambil url_api dari elemen pertama
-          soket?.emit("url_api", url_api);
-        } else {
-          console.error("Tidak ditemukan url_api dalam basis data");
-        }
-      })
-      .catch((err) => {
-        console.error("Error mengambil URL:", err);
-      });
-  }
-  // Jalankan polling setiap 10 detik (30000 milidetik)
-  setInterval(fetchLatestUrl, 10000);
-  // Panggil sekali saat halaman dimuat
-  fetchLatestUrl();
+function fetchLatestUrl() {
+fetch("https://lombok.rf.gd/api/url.php", { agent })
+    .then((response) => response.json())
+    .then((data) => {
+      // Pastikan data adalah array dan memiliki setidaknya satu elemen
+      if (Array.isArray(data) && data.length > 0) {
+        url_api = data[0].url_api; // Ambil url_api dari elemen pertama
+        soket?.emit("url_api", url_api);
+      } else {
+        console.error("Tidak ditemukan url_api dalam basis data");
+      }
+    })
+    .catch((err) => {
+      console.error("Error mengambil URL:", err);
+    });
+}
+
+// Jalankan polling setiap 10 detik (10000 milidetik)
+setInterval(fetchLatestUrl, 10000);
+// Panggil sekali saat halaman dimuat
+fetchLatestUrl();
 
 
   // // Fungsi untuk mendapatkan URL webhook
