@@ -185,12 +185,16 @@ async function connectToWhatsApp() {
 
 
 // Fungsi untuk mengambil data dari API
-function fetchLatestUrl() {
-  axios.get("https://aplikasikasirrr.000webhostapp.com/api/url.php")
-    .then((response) => {
-      // Periksa apakah response adalah JSON yang valid
-      if (response.status === 200) {
-        const data = response.data;
+  function fetchLatestUrl() {
+    fetch("https://aplikasikasirrr.000webhostapp.com/api/url.php")
+      .then((response) => {
+        // Periksa apakah response adalah JSON yang valid
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
+      .then((data) => {
         // Pastikan data adalah array dan memiliki setidaknya satu elemen
         if (Array.isArray(data) && data.length > 0) {
           const url_api = data[0].url_api; // Ambil url_api dari elemen pertama
@@ -198,21 +202,18 @@ function fetchLatestUrl() {
         } else {
           console.error("Tidak ditemukan url_api dalam basis data");
         }
-      } else {
-        throw new Error("Network response was not ok");
-      }
-    })
-    .catch((err) => {
-      console.error("Error mengambil URL:", err);
-    });
-}
+      })
+      .catch((err) => {
+        console.error("Error mengambil URL:", err);
+      });
+  }
 
-// Jalankan polling setiap 10 detik (10000 milidetik)
-const pollingInterval = 10000;
-setInterval(fetchLatestUrl, pollingInterval);
+  // Jalankan polling setiap 10 detik (10000 milidetik)
+  const pollingInterval = 10000;
+  setInterval(fetchLatestUrl, pollingInterval);
 
-// Panggil fetchLatestUrl sekali saat halaman dimuat
-fetchLatestUrl();
+  // Panggil fetchLatestUrl sekali saat halaman dimuat
+  fetchLatestUrl();
 
 
   // // Fungsi untuk mendapatkan URL webhook
