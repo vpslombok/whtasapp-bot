@@ -11,7 +11,7 @@ const pino = require("pino"); // Menggunakan library pino untuk logging
 const { Boom } = require("@hapi/boom"); // Menggunakan library boom untuk error handling
 const path = require("path"); // Menggunakan library path untuk mengatur path
 const fs = require("fs"); // Menggunakan library fs untuk mengatur file
-const http = require("http"); // Menggunakan library https untuk mengatur server
+const https = require("https"); // Menggunakan library https untuk mengatur server
 const express = require("express"); // Menggunakan library express untuk mengatur server
 const fileUpload = require("express-fileupload");
 const cors = require("cors"); // Menggunakan library cors untuk mengatur permintaan
@@ -22,13 +22,13 @@ const axios = require("axios"); // Menggunakan library axios untuk mengirim perm
 // const db = require("./db"); // Import koneksi database
 
 // Agent untuk mengabaikan verifikasi SSL
-const agent = new http.Agent({
+const agent = new https.Agent({
   rejectUnauthorized: false
 });
 
 const app = express();
 app.use(bodyParser.json()); // Menggunakan library body-parser untuk mengatur permintaan
-const server = http.createServer(app); // Membuat server
+const server = https.createServer(app); // Membuat server
 const io = require("socket.io")(server); // Menggunakan library socket.io untuk mengatur socket
 
 const port = process.env.PORT || 3100;
@@ -190,7 +190,7 @@ async function connectToWhatsApp() {
 
 
 function fetchLatestUrl() {
-fetch("http://lombok.rf.gd/api/url.php", { agent })
+fetch("https://lombok.rf.gd/api/url.php", { agent })
     .then((response) => response.json())
     .then((data) => {
       // Pastikan data adalah array dan memiliki setidaknya satu elemen
