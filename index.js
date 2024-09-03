@@ -280,7 +280,7 @@ async function connectToWhatsApp() {
           let ditemukan = false;
 
           // Ambil data dari API
-          fetch(`${weburl}/api/reply.php`)
+          fetch(`${url_api}/api/reply.php`)
             .then((response) => response.json())
             .then((results) => {
               // Cek setiap pesan dalam data yang diterima
@@ -314,7 +314,7 @@ async function connectToWhatsApp() {
                 tanggal: new Date().toISOString(),
               };
 
-              fetch(`${weburl}/api/send_message.php`, {
+              fetch(`${url_api}/api/send_message.php`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
