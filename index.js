@@ -311,7 +311,6 @@ async function connectToWhatsApp() {
                 number: noWhatsapp,
                 message_in: pesanMasuk,
                 message: balasan,
-                tanggal: new Date().toISOString(),
               };
 
               fetch(`${url_api}/api/send_message.php`, {
@@ -501,7 +500,6 @@ app.post("/send-message", async (req, res) => {
           number: number,
           message_in: "Dikirim via Web",
           message: pesankirim,
-          tanggal: moment().format("YYYY-MM-DDTHH:mm:ss"),
         };
 
         //simpan pesan ke database via rest api
