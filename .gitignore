@@ -1,6 +1,6 @@
 # Mengecualikan direktori node_modules jika menggunakan Node.js
 node_modules/
 uploads/
-session3
+localhost
 db.js
 db.php

@@ -1,4 +1,3 @@
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const {
   default: makeWASocket, // Menggunakan library baileys untuk WhatsApp
   fetchLatestBaileysVersion,
@@ -21,6 +20,7 @@ const qrcode = require("qrcode"); // Menggunakan library qrcode untuk mengatur Q
 const moment = require("moment-timezone"); // Menggunakan library moment-timezone untuk mengatur waktu
 const axios = require("axios"); // Menggunakan library axios untuk mengirim permintaan
 // const db = require("./db"); // Import koneksi database
+const fetch = require("node-fetch");
 
 const app = express();
 app.use(bodyParser.json()); // Menggunakan library body-parser untuk mengatur permintaan
@@ -184,37 +184,27 @@ async function connectToWhatsApp() {
   //   }
   // }
 
-
-// Fungsi untuk mengambil data dari API
-function fetchLatestUrl() {
-  axios.get("https://lombok.rf.gd/api/url.php")
-    .then((response) => {
-      // Periksa apakah response adalah JSON yang valid
-      if (response.status === 200) {
-        const data = response.data;
+  // Fungsi untuk mengambil data dari API
+  function fetchLatestUrl() {
+    fetch("https://lombok.rf.gd/api/url.php")
+      .then((response) => response.json())
+      .then((data) => {
         // Pastikan data adalah array dan memiliki setidaknya satu elemen
         if (Array.isArray(data) && data.length > 0) {
-          const url_api = data[0].url_api; // Ambil url_api dari elemen pertama
+          url_api = data[0].url_api; // Ambil url_api dari elemen pertama
           soket?.emit("url_api", url_api);
         } else {
           console.error("Tidak ditemukan url_api dalam basis data");
         }
-      } else {
-        throw new Error("Network response was not ok");
-      }
-    })
-    .catch((err) => {
-      console.error("Error mengambil URL:", err);
-    });
-}
-
-// Jalankan polling setiap 10 detik (10000 milidetik)
-const pollingInterval = 10000;
-setInterval(fetchLatestUrl, pollingInterval);
-
-// Panggil fetchLatestUrl sekali saat halaman dimuat
-fetchLatestUrl();
-
+      })
+      .catch((err) => {
+        console.error("Error mengambil URL:", err);
+      });
+  }
+  // Jalankan polling setiap 10 detik (30000 milidetik)
+  setInterval(fetchLatestUrl, 10000);
+  // Panggil sekali saat halaman dimuat
+  fetchLatestUrl();
 
   // // Fungsi untuk mendapatkan URL webhook
   // async function getWebhookUrl() {
@@ -436,7 +426,6 @@ app.get("/api/qr-code", (req, res) => {
   }
 });
 
-// Endpoint untuk mengirim pesan button
 app.post("/send-button-message", async (req, res) => {
   const { number, message, buttonText, buttonId } = req.body;
 
@@ -454,27 +443,36 @@ app.post("/send-button-message", async (req, res) => {
     const exists = await sock.onWhatsApp(numberWA);
     if (exists?.jid || (exists && exists[0]?.jid)) {
       await sock.sendMessage(exists.jid || exists[0].jid, {
-        button: {
-          text: message,
-          footer: "Klik tombol di bawah ini:",
-          buttons: [
-            { buttonId: buttonId, buttonText: { displayText: buttonText } },
-          ],
-        },
+        text: message,
+        footer: "Klik tombol di bawah ini:",
+        buttons: [
+          {
+            buttonId: buttonId,
+            buttonText: { displayText: buttonText },
+            type: 1,
+          },
+        ],
+        headerType: 1,
       });
 
-      res.status(200).json({
+      console.log(`Pesan button berhasil dikirim ke ${number}`);
+      return res.status(200).json({
         status: true,
-        response: "Pesan button berhasil dikirim ke " + number,
+        response: `Pesan button berhasil dikirim ke ${number}`,
       });
     } else {
-      res.status(500).json({
+      console.log(`Nomor ${number} tidak terdaftar di WhatsApp`);
+      return res.status(404).json({
         status: false,
-        response: `Nomor ${number} tidak terdaftar.`,
+        response: `Nomor ${number} tidak terdaftar di WhatsApp`,
       });
     }
-  } catch (err) {
-    res.status(500).send(err);
+  } catch (error) {
+    console.error("Error saat mengirim pesan button:", error);
+    return res.status(500).json({
+      status: false,
+      response: "Terjadi kesalahan saat mengirim pesan button",
+    });
   }
 });
 
@@ -503,7 +501,7 @@ app.post("/send-message", async (req, res) => {
           number: number,
           message_in: "Dikirim via Web",
           message: pesankirim,
-          tanggal: new Date().toISOString(),
+          tanggal: moment().format("YYYY-MM-DDTHH:mm:ss"),
         };
 
         //simpan pesan ke database via rest api
