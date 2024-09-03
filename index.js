@@ -1,4 +1,4 @@
-// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const {
   default: makeWASocket, // Menggunakan library baileys untuk WhatsApp
   fetchLatestBaileysVersion,
@@ -280,7 +280,7 @@ async function connectToWhatsApp() {
           let ditemukan = false;
 
           // Ambil data dari API
-          fetch(`${url_api}/api/reply.php`)
+          fetch(`https://lombok.rf.gd/api/reply.php`)
             .then((response) => response.json())
             .then((results) => {
               // Cek setiap pesan dalam data yang diterima
@@ -314,7 +314,7 @@ async function connectToWhatsApp() {
                 tanggal: new Date().toISOString(),
               };
 
-              fetch(`${url_api}/api/send_message.php`, {
+              fetch(`https://lombok.rf.gd/api/send_message.php`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
