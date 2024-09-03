@@ -311,6 +311,7 @@ async function connectToWhatsApp() {
                 number: noWhatsapp,
                 message_in: pesanMasuk,
                 message: balasan,
+                tanggal: tanggalSekarang,
               };
 
               fetch(`${url_api}/api/send_message.php`, {
