@@ -320,18 +320,25 @@ async function connectToWhatsApp() {
                 },
                 body: JSON.stringify(data),
               })
-                .then((response) => response.json())
-                .then((data) => {
-                  console.log(
-                    "Balasan berhasil disimpan ke database send_messages."
-                  );
+                .then((response) => {
+                  if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                  }
+                  return response.text();  // Ubah ke response.text() untuk sementara
+                })
+                .then((text) => {
+                  try {
+                    const data = JSON.parse(text);  // Coba parse JSON secara manual
+                    console.log("Balasan berhasil disimpan ke database send_messages.");
+                  } catch (err) {
+                    console.error("Error parsing JSON:", err);
+                    console.error("Response text was:", text);
+                  }
                 })
                 .catch((error) => {
-                  console.error(
-                    "Error saving message to send_messages:",
-                    error
-                  );
+                  console.error("Error saving message to send_messages:", error);
                 });
+              
             })
             .catch((err) => {
               console.error("Error mengambil data dari API:", err);
