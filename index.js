@@ -1,4 +1,3 @@
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const {
   default: makeWASocket, // Menggunakan library baileys untuk WhatsApp
   fetchLatestBaileysVersion,
@@ -21,6 +20,7 @@ const qrcode = require("qrcode"); // Menggunakan library qrcode untuk mengatur Q
 const moment = require("moment-timezone"); // Menggunakan library moment-timezone untuk mengatur waktu
 const axios = require("axios"); // Menggunakan library axios untuk mengirim permintaan
 // const db = require("./db"); // Import koneksi database
+const fetch = require('node-fetch');
 
 const app = express();
 app.use(bodyParser.json()); // Menggunakan library body-parser untuk mengatur permintaan
