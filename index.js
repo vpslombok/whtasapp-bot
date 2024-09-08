@@ -187,7 +187,7 @@ async function connectToWhatsApp() {
       });
   }
   // Jalankan polling setiap 10 detik (30000 milidetik)
-  setInterval(fetchLatestUrl, 60000);
+  setInterval(fetchLatestUrl, 10000);
   // Panggil sekali saat halaman dimuat
   fetchLatestUrl();
   // // Fungsi untuk mendapatkan URL webhook
