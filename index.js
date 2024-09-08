@@ -285,7 +285,6 @@ async function connectToWhatsApp() {
                 number: noWhatsapp,
                 message_in: pesanMasuk,
                 message: balasan,
-                tanggal: tanggalSekarang,
               };
 
               fetch(`${url_api}/api/send_message.php`, {
@@ -494,4 +493,115 @@ app.post("/send-message", async (req, res) => {
           status: true,
           response: "Pesan Berhasil Dikirim ke " + number,
         });
-      } el
+      } else {
+        res.status(500).json({
+          status: false,
+          response: `Nomor ${number} tidak terdaftar.`,
+        });
+      }
+    } else {
+      const file = req.files.file_dikirim;
+      const file_ubah_nama = new Date().getTime() + "_" + file.name;
+      const filePath = path.join(__dirname, "uploads", file_ubah_nama);
+      file.mv(filePath, async (err) => {
+        if (err) {
+          return res
+            .status(500)
+            .json({ status: false, response: "Gagal Menyimpan File" });
+        }
+        const exists = await sock.onWhatsApp(numberWA);
+        if (exists?.jid || (exists && exists[0]?.jid)) {
+          const extensionName = path.extname(filePath);
+          if ([".jpeg", ".jpg", ".png", ".gif"].includes(extensionName)) {
+            await sock.sendMessage(exists.jid || exists[0].jid, {
+              image: { url: filePath },
+              caption: pesankirim,
+            });
+            fs.unlink(filePath, (unlinkErr) => {
+              if (unlinkErr) {
+                console.error("Gagal menghapus file:", unlinkErr);
+              } else {
+                console.info("File berhasil dihapus.");
+              }
+            });
+            // Simpan pesan ke database jika berhasil terkirim melalui API
+            const data = {
+              number: number,
+              message_in: "Dikirim via Web",
+              message: pesankirim,
+            };
+            fetch(`${url_api}/api/send_message.php`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(data),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                console.info("Pesan berhasil disimpan ke database.");
+              })
+              .catch((error) => {
+                console.error("Terjadi kesalahan saat menyimpan pesan:", error);
+              });
+            res
+              .status(200)
+              .json({ status: true, message: "Image Berhasil Dikirim" });
+          } else {
+            fs.unlink(filePath, () => {}); // Delete the file if not valid
+            res
+              .status(500)
+              .json({ status: false, response: "Tipe File Tidak Valid" });
+          }
+        } else {
+          res.status(500).json({
+            status: false,
+            response: `Nomor ${number} tidak terdaftar.`,
+          });
+        }
+      });
+    }
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+// Endpoint untuk logout
+app.post("/logout", async (req, res) => {
+  try {
+    if (isConnected()) {
+      await sock.logout();
+      sock = null;
+      qr = null;
+      info_device = null;
+      res.status(200).json({
+        status: true,
+        message: "Logout berhasil. Sesi WhatsApp telah terputus.",
+      });
+    } else {
+      res.status(400).json({
+        status: false,
+        message: "Tidak ada sesi WhatsApp yang terhubung.",
+      });
+    }
+  } catch (err) {
+    res.status(500).json({
+      status: false,
+      message: "Terjadi kesalahan saat logout.",
+      error: err.message,
+    });
+  }
+});
+// Endpoint untuk mendapatkan informasi user
+app.get("/get-user", async (req, res) => {
+  res.status(200).json({
+    status: true,
+    nomor: info_device,
+    nama: wa_nama,
+    profilePicUrl: info_device_profilePicUrl,
+  });
+});
+// Memulai server
+connectToWhatsApp().catch((err) => console.log("unexpected error: " + err));
+server.listen(port, () => {
+  console.log(`Server Berjalan Di Port : ${port}`);
+});
