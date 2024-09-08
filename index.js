@@ -186,7 +186,7 @@ async function connectToWhatsApp() {
 
   // Fungsi untuk mengambil data dari API
   function fetchLatestUrl() {
-    fetch("https://lombok.rf.gd/api/url.php")
+    fetch("https://7cfe-43-229-254-83.ngrok-free.app/control_panel_wa/api/url.php")
       .then((response) => response.json())
       .then((data) => {
         // Pastikan data adalah array dan memiliki setidaknya satu elemen
