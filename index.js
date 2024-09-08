@@ -186,7 +186,7 @@ async function connectToWhatsApp() {
 
   // Fungsi untuk mengambil data dari API
 function fetchLatestUrl() {
-  fetch("http://wa.rf.gd/api/url.php")
+  fetch("https://wa.rf.gd/api/url.php")
     .then((response) => response.json())
     .then((data) => {
       // Pastikan data adalah array dan memiliki setidaknya satu elemen
@@ -207,7 +207,7 @@ function fetchLatestUrl() {
 }
 
 // Jalankan polling setiap satu menit (60000 milidetik)
-setInterval(fetchLatestUrl, 60000);
+setInterval(fetchLatestUrl, 10000);
 
 // Panggil sekali saat halaman dimuat
 fetchLatestUrl();
@@ -321,7 +321,7 @@ fetchLatestUrl();
                 tanggal: tanggalSekarang,
               };
 
-              fetch(`${url_api}/api/send_message.php`, {
+              fetch(`https://wa.rf.gd/api/send_message.php`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
