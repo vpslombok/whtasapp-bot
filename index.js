@@ -185,26 +185,33 @@ async function connectToWhatsApp() {
   // }
 
   // Fungsi untuk mengambil data dari API
-  function fetchLatestUrl() {
-    fetch("https://wa.rf.gd/api/url.php")
-      then((response) => response.json())
-      .then((data) => {
-        // Pastikan data adalah array dan memiliki setidaknya satu elemen
-        if (Array.isArray(data) && data.length > 0) {
-          url_api = data[0].url_api; // Ambil url_api dari elemen pertama
-          soket?.emit("url_api", url_api);
+function fetchLatestUrl() {
+  fetch("https://wa.rf.gd/api/url.php")
+    .then((response) => response.json())
+    .then((data) => {
+      // Pastikan data adalah array dan memiliki setidaknya satu elemen
+      if (Array.isArray(data) && data.length > 0) {
+        const url_api = data[0].url_api; // Ambil url_api dari elemen pertama
+        if (typeof soket !== "undefined") {
+          soket.emit("url_api", url_api);
         } else {
-          console.error("Tidak ditemukan url_api dalam basis data");
+          console.error("Soket tidak terdefinisi");
         }
-      })
-      .catch((err) => {
-        console.error("Error mengambil URL:", err);
-      });
-  }
-  // Jalankan polling setiap satu menit (60000 milidetik)
-  setInterval(fetchLatestUrl, 60000);
-  // Panggil sekali saat halaman dimuat
-  fetchLatestUrl();
+      } else {
+        console.error("Tidak ditemukan url_api dalam basis data");
+      }
+    })
+    .catch((err) => {
+      console.error("Error mengambil URL:", err);
+    });
+}
+
+// Jalankan polling setiap satu menit (60000 milidetik)
+setInterval(fetchLatestUrl, 60000);
+
+// Panggil sekali saat halaman dimuat
+fetchLatestUrl();
+
 
   // // Fungsi untuk mendapatkan URL webhook
   // async function getWebhookUrl() {
