@@ -186,7 +186,7 @@ async function connectToWhatsApp() {
 
   // Fungsi untuk mengambil data dari API
   function fetchLatestUrl() {
-    fetch("https://9cb7-43-229-254-83.ngrok-free.app/control_panel_wa/api/url.php")
+    fetch("https://wa.rf.gd/api/url.php")
       .then((response) => response.json())
       .then((data) => {
         // Pastikan data adalah array dan memiliki setidaknya satu elemen
@@ -201,8 +201,8 @@ async function connectToWhatsApp() {
         console.error("Error mengambil URL:", err);
       });
   }
-  // Jalankan polling setiap 10 detik (30000 milidetik)
-  setInterval(fetchLatestUrl, 10000);
+  // Jalankan polling setiap satu menit (60000 milidetik)
+  setInterval(fetchLatestUrl, 60000);
   // Panggil sekali saat halaman dimuat
   fetchLatestUrl();
 
