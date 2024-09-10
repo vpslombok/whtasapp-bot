@@ -19,13 +19,13 @@ const qrcode = require("qrcode"); // Menggunakan library qrcode untuk mengatur Q
 const moment = require("moment-timezone"); // Menggunakan library moment-timezone untuk mengatur waktu
 const axios = require("axios"); // Menggunakan library axios untuk mengirim permintaan
 // const db = require("./db"); // Import koneksi database
-// const fetch = require("node-fetch");
+const fetch = require("node-fetch");
 const app = express();
 app.use(bodyParser.json()); // Menggunakan library body-parser untuk mengatur permintaan
 const server = http.createServer(app); // Membuat server
 const io = require("socket.io")(server); // Menggunakan library socket.io untuk mengatur socket
 const port = process.env.PORT || 3100;
-const session = "./localhost"; // Menggunakan library session untuk mengatur session
+const session = "./session"; // Menggunakan library session untuk mengatur session
 const store = makeInMemoryStore({
   logger: pino().child({ level: "silent", stream: "store" }),
 }); // Menggunakan library pino untuk logging
