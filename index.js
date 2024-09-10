@@ -6,7 +6,6 @@ const {
   useMultiFileAuthState,
   DisconnectReason,
 } = require("@whiskeysockets/baileys"); // Menggunakan library baileys untuk WhatsApp
-
 const pino = require("pino"); // Menggunakan library pino untuk logging
 const { Boom } = require("@hapi/boom"); // Menggunakan library boom untuk error handling
 const path = require("path"); // Menggunakan library path untuk mengatur path
@@ -20,34 +19,28 @@ const qrcode = require("qrcode"); // Menggunakan library qrcode untuk mengatur Q
 const moment = require("moment-timezone"); // Menggunakan library moment-timezone untuk mengatur waktu
 const axios = require("axios"); // Menggunakan library axios untuk mengirim permintaan
 // const db = require("./db"); // Import koneksi database
-const fetch = require("node-fetch");
-
+// const fetch = require("node-fetch");
 const app = express();
 app.use(bodyParser.json()); // Menggunakan library body-parser untuk mengatur permintaan
 const server = http.createServer(app); // Membuat server
 const io = require("socket.io")(server); // Menggunakan library socket.io untuk mengatur socket
-
 const port = process.env.PORT || 3100;
-const session = "./session"; // Menggunakan library session untuk mengatur session
+const session = "./localhost"; // Menggunakan library session untuk mengatur session
 const store = makeInMemoryStore({
   logger: pino().child({ level: "silent", stream: "store" }),
 }); // Menggunakan library pino untuk logging
-
 // Variabel untuk menyimpan data
 let sock, qr, soket, info_device, info_device_profilePicUrl, wa_nama, url_api;
-
 // Middleware untuk mengatur permintaan
 app.use(fileUpload({ createParentPath: true })); // Menggunakan library fileUpload untuk mengatur file
 app.use(cors()); // Menggunakan library cors untuk mengatur permintaan
 app.use(bodyParser.json()); // Menggunakan library body-parser untuk mengatur permintaan
 app.use(bodyParser.urlencoded({ extended: true })); // Menggunakan library body-parser untuk mengatur permintaan
 app.use("/assets", express.static(__dirname + "/client/assets")); // Menggunakan library express untuk mengatur server
-
 // Fungsi untuk mendapatkan pesan selamat yang lebih realistis
 function getGreeting() {
   const currentHour = moment().tz("Asia/Singapore").hour();
   const currentDay = moment().tz("Asia/Singapore").format("dddd");
-
   let greeting;
   if (currentHour >= 0 && currentHour < 12) {
     greeting = "Selamat Pagi";
@@ -60,7 +53,6 @@ function getGreeting() {
   }
   return greeting;
 }
-
 // Fungsi untuk mendapatkan foto profil
 async function getProfilePicture(jid) {
   try {
@@ -71,7 +63,6 @@ async function getProfilePicture(jid) {
     return null;
   }
 }
-
 // Fungsi untuk mengkoneksi ke WhatsApp
 async function connectToWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState(session);
@@ -86,16 +77,13 @@ async function connectToWhatsApp() {
   });
   store.bind(sock.ev);
   sock.multi = true;
-
   // Event untuk mengupdate koneksi
   sock.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect } = update;
-
     if (connection === "close") {
       const reason =
         lastDisconnect.error?.output?.statusCode || "Tidak Diketahui";
       console.log(`Koneksi ditutup dengan alasan: ${reason}`);
-
       switch (reason) {
         case DisconnectReason.badSession:
           console.log(`File Sesi , Silakan Hapus ${session} dan Scan Lagi`);
@@ -162,7 +150,6 @@ async function connectToWhatsApp() {
         // console.log(`id_group: ${group.id} || Nama Group: ${group.subject}`);
       }
     }
-
     if (update.qr) {
       qr = update.qr;
       updateQR("qr");
@@ -172,7 +159,6 @@ async function connectToWhatsApp() {
       updateQR("qrscanned");
     }
   });
-
   // // Fungsi untuk mengirim data ke webhook
   // async function sendToWebhook(data) {
   //   try {
@@ -183,10 +169,9 @@ async function connectToWhatsApp() {
   //     // console.error("Error sending to webhook:", error);
   //   }
   // }
-
   // Fungsi untuk mengambil data dari API
   function fetchLatestUrl() {
-    fetch("https://wa.rf.gd/api/url.php")
+    fetch("https://wa.sasak.xyz/api/url.php")
       .then((response) => response.json())
       .then((data) => {
         // Pastikan data adalah array dan memiliki setidaknya satu elemen
@@ -201,11 +186,10 @@ async function connectToWhatsApp() {
         console.error("Error mengambil URL:", err);
       });
   }
-  // Jalankan polling setiap satu menit (60000 milidetik)
-  setInterval(fetchLatestUrl, 60000);
+  // Jalankan polling setiap 10 detik (30000 milidetik)
+  setInterval(fetchLatestUrl, 10000);
   // Panggil sekali saat halaman dimuat
   fetchLatestUrl();
-
   // // Fungsi untuk mendapatkan URL webhook
   // async function getWebhookUrl() {
   //   try {
@@ -229,7 +213,6 @@ async function connectToWhatsApp() {
     if (type === "notify") {
       const message = messages[0];
       const isFromMe = message.key.fromMe;
-
       if (!isFromMe) {
         let pesan = "[Jenis pesan tidak dikenal]"; // Default message
         if (message.message) {
@@ -255,7 +238,6 @@ async function connectToWhatsApp() {
             pesan = message.message.templateButtonReplyMessage.selectedId; // Template button reply message
           }
         }
-
         // Mendapatkan nomor WhatsApp pengirim dan nama pengirim
         const noWa = message.key.remoteJid;
         const namaPengirim = message.pushName;
@@ -264,21 +246,16 @@ async function connectToWhatsApp() {
         const tanggalSekarang = moment()
           .tz("Asia/Singapore")
           .format("DD-MM-YYYY");
-
         console.log(`Pesan Masuk dari ${namaPengirim}: ${pesan}`); // Log pesan masuk untuk debugging
-
         await sock.readMessages([message.key]);
-
         let balasan = "";
         const greeting = getGreeting();
-
         if (noWa.endsWith("@g.us")) {
           console.log(`Pesan dari grup ${noWa}: ${pesan}`);
           balasan = `${greeting} *${namaPengirim}*, Mohon Maaf, Fitur Bot Belum Tersedia di Grup`;
         } else {
           // Deklarasi variabel 'ditemukan' di luar
           let ditemukan = false;
-
           // Ambil data dari API
           fetch(`${url_api}/api/reply.php`)
             .then((response) => response.json())
@@ -295,23 +272,19 @@ async function connectToWhatsApp() {
                   ditemukan = true;
                 }
               });
-
               // Jika pesan tidak ditemukan dalam data
               if (!ditemukan) {
                 balasan = `${greeting} *${namaPengirim}*, di WhatsApp Bot Pintar ketik *INFO* untuk Menggunakan Fitur Bot`;
               }
               console.log("balasan: " + balasan);
-
               // Kirim balasan setelah loop selesai
               sock.sendMessage(noWa, { text: balasan });
               const noWhatsapp = noWa.replace("@s.whatsapp.net", "");
-
               // Simpan balasan ke database send_messages menggunakan API
               const data = {
                 number: noWhatsapp,
                 message_in: pesanMasuk,
                 message: balasan,
-                tanggal: tanggalSekarang,
               };
 
               fetch(`${url_api}/api/send_message.php`, {
@@ -345,7 +318,6 @@ async function connectToWhatsApp() {
               console.error("Error mengambil data dari API:", err);
             });
         }
-
         // // Data yang dikirim ke webhook
         // const dataToSend = {
         //   number: noWa,
@@ -353,14 +325,12 @@ async function connectToWhatsApp() {
         //   message: pesan,
         //   timestamp: moment().tz("Asia/Singapore").format(),
         // };
-
         // // Kirim data ke webhook
         // await sendToWebhook(dataToSend);
       }
     }
   });
 }
-
 // Event untuk mengupdate QR
 io.on("connection", (socket) => {
   soket = socket;
@@ -370,10 +340,8 @@ io.on("connection", (socket) => {
     updateQR("qr");
   }
 });
-
 // Fungsi untuk mengecek apakah WhatsApp terhubung
 const isConnected = () => !!sock?.user;
-
 // Fungsi untuk mengupdate QR
 const updateQR = (data) => {
   switch (data) {
@@ -406,7 +374,6 @@ const updateQR = (data) => {
       break;
   }
 };
-
 // Endpoint untuk mendapatkan QR code
 app.get("/api/qr-code", (req, res) => {
   if (isConnected()) {
@@ -432,10 +399,8 @@ app.get("/api/qr-code", (req, res) => {
     }
   }
 });
-
 app.post("/send-button-message", async (req, res) => {
   const { number, message, buttonText, buttonId } = req.body;
-
   if (!number || !message || !buttonText || !buttonId) {
     return res.status(400).json({
       status: false,
@@ -443,9 +408,7 @@ app.post("/send-button-message", async (req, res) => {
         "Semua parameter diperlukan: number, message, buttonText, buttonId",
     });
   }
-
   const numberWA = "62" + number.substring(1) + "@s.whatsapp.net";
-
   try {
     const exists = await sock.onWhatsApp(numberWA);
     if (exists?.jid || (exists && exists[0]?.jid)) {
@@ -461,7 +424,6 @@ app.post("/send-button-message", async (req, res) => {
         ],
         headerType: 1,
       });
-
       console.log(`Pesan button berhasil dikirim ke ${number}`);
       return res.status(200).json({
         status: true,
@@ -482,20 +444,16 @@ app.post("/send-button-message", async (req, res) => {
     });
   }
 });
-
 // Endpoint untuk mengirim pesan
 app.post("/send-message", async (req, res) => {
   const { message: pesankirim, number } = req.body;
   const { file_dikirim: fileDikirim } = req.files || {};
-
   if (!number) {
     return res
       .status(500)
       .json({ status: false, response: "Nomor WA tidak disertakan!" });
   }
-
   const numberWA = "62" + number.substring(1) + "@s.whatsapp.net";
-
   try {
     if (!fileDikirim) {
       const exists = await sock.onWhatsApp(numberWA);
@@ -509,7 +467,6 @@ app.post("/send-message", async (req, res) => {
           message_in: "Dikirim via Web",
           message: pesankirim,
         };
-
         //simpan pesan ke database via rest api
         fetch(`${url_api}/api/send_message.php`, {
           method: "POST",
@@ -546,14 +503,12 @@ app.post("/send-message", async (req, res) => {
       const file = req.files.file_dikirim;
       const file_ubah_nama = new Date().getTime() + "_" + file.name;
       const filePath = path.join(__dirname, "uploads", file_ubah_nama);
-
       file.mv(filePath, async (err) => {
         if (err) {
           return res
             .status(500)
             .json({ status: false, response: "Gagal Menyimpan File" });
         }
-
         const exists = await sock.onWhatsApp(numberWA);
         if (exists?.jid || (exists && exists[0]?.jid)) {
           const extensionName = path.extname(filePath);
@@ -562,7 +517,6 @@ app.post("/send-message", async (req, res) => {
               image: { url: filePath },
               caption: pesankirim,
             });
-
             fs.unlink(filePath, (unlinkErr) => {
               if (unlinkErr) {
                 console.error("Gagal menghapus file:", unlinkErr);
@@ -570,15 +524,12 @@ app.post("/send-message", async (req, res) => {
                 console.info("File berhasil dihapus.");
               }
             });
-
             // Simpan pesan ke database jika berhasil terkirim melalui API
             const data = {
               number: number,
               message_in: "Dikirim via Web",
               message: pesankirim,
-              tanggal: new Date().toISOString(),
             };
-
             fetch(`${url_api}/api/send_message.php`, {
               method: "POST",
               headers: {
@@ -614,7 +565,6 @@ app.post("/send-message", async (req, res) => {
     res.status(500).send(err);
   }
 });
-
 // Endpoint untuk logout
 app.post("/logout", async (req, res) => {
   try {
@@ -641,7 +591,6 @@ app.post("/logout", async (req, res) => {
     });
   }
 });
-
 // Endpoint untuk mendapatkan informasi user
 app.get("/get-user", async (req, res) => {
   res.status(200).json({
@@ -651,10 +600,8 @@ app.get("/get-user", async (req, res) => {
     profilePicUrl: info_device_profilePicUrl,
   });
 });
-
 // Memulai server
 connectToWhatsApp().catch((err) => console.log("unexpected error: " + err));
-
 server.listen(port, () => {
   console.log(`Server Berjalan Di Port : ${port}`);
 });
