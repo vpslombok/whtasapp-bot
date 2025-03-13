@@ -1,5 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/xayjyaqu/wa.bael.my.id/
+    - export DEPLOYPATH=/home/qlljlhql/wa.sasak.xyz/
     - cp -r * $DEPLOYPATH
