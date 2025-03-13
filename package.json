@@ -1,7 +1,7 @@
 {
   "name": "bot_wa",
   "version": "04.08.2024",
-  "description": "whatsapp bot sederhana",
+  "description": "whatsapp node js",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -26,6 +26,7 @@
     "link-preview-js": "^3.0.0",
     "moment-timezone": "^0.5.45",
     "mysql2": "^3.11.0",
+    "node-fetch": "^2.7.0",
     "pg": "^8.12.0",
     "qrcode": "^1.5.1",
     "qrcode-terminal": "^0.12.0",

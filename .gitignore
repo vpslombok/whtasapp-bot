@@ -1,6 +1,13 @@
 # Mengecualikan direktori node_modules jika menggunakan Node.js
+localhost
 node_modules/
 uploads/
-localhost/
 db.js
 db.php
+session
+assets
+routes.js
+socket.js
+utils.js
+whatsapp.js
+config.js
